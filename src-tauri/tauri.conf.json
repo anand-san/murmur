@@ -13,9 +13,12 @@
     "windows": [
       {
         "title": "vaiced-tauri",
-        "width": 800,
-        "height": 600,
-        "alwaysOnTop": true
+        "width": 400,
+        "height": 100,
+        "alwaysOnTop": true,
+        "decorations": false,
+        "hiddenTitle": true,
+        "browserExtensionsEnabled": false
       }
     ],
     "security": {
