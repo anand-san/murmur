@@ -10,19 +10,32 @@
     "frontendDist": "../dist"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
+        "label": "main",
         "title": "vaiced-tauri",
         "width": 400,
-        "height": 100,
-        "alwaysOnTop": true,
+        "height": 550,
+        "visible": false
+      },
+      {
+        "label": "recorder",
+        "title": "Recording",
+        "width": 300,
         "decorations": false,
+        "alwaysOnTop": true,
         "hiddenTitle": true,
-        "browserExtensionsEnabled": false
+        "visible": false,
+        "focus": false,
+        "resizable": false,
+        "fullscreen": false,
+        "maximized": false,
+        "transparent": true
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' blob: data: media: https://api.groq.com; connect-src 'self' https://api.groq.com; script-src 'self' 'unsafe-eval';"
     }
   },
   "bundle": {
