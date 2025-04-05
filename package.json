@@ -11,6 +11,9 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@ai-sdk/react": "^1.2.6",
+    "@radix-ui/react-accordion": "^1.2.3",
+    "@radix-ui/react-scroll-area": "^1.2.3",
     "@radix-ui/react-slot": "^1.1.2",
     "@tailwindcss/vite": "^4.1.2",
     "@tanstack/react-query": "^5.71.5",
@@ -18,10 +21,12 @@
     "@tauri-apps/plugin-fs": "~2",
     "@tauri-apps/plugin-global-shortcut": "~2",
     "@tauri-apps/plugin-positioner": "^2.2.0",
+    "ai": "^4.3.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "extendable-media-recorder": "^9.2.23",
     "extendable-media-recorder-wav-encoder": "^7.0.127",
+    "framer-motion": "^12.6.3",
     "lucide-react": "^0.487.0",
     "openai": "^4.91.1",
     "react": "^18.3.1",

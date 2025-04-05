@@ -23,6 +23,7 @@
         "label": "recorder",
         "title": "Recording",
         "width": 300,
+        "maxHeight": 300,
         "decorations": false,
         "alwaysOnTop": true,
         "hiddenTitle": true,
@@ -31,7 +32,12 @@
         "resizable": false,
         "fullscreen": false,
         "maximized": false,
-        "transparent": true
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["blur", "acrylic"],
+          "radius": 20,
+          "color": "#000000"
+        }
       }
     ],
     "security": {

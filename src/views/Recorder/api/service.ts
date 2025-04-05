@@ -4,7 +4,8 @@
  */
 import { invoke } from "@tauri-apps/api/core";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const BACKEND_URL =
+  import.meta.env.VITE_BACKEND_URL || "http://localhost:3000/api";
 
 /**
  * Creates a Blob from a base64 encoded string
@@ -77,32 +78,50 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
   }
 };
 
+// Define the expected message structure for the API
+interface ApiChatMessage {
+  role: "user" | "assistant" | "system"; // Add other roles if needed
+  content: string;
+}
+
 /**
- * Generates chat completion using our backend API
+ * Calls the streaming chat backend API and returns the response stream.
  */
-export const generateChatCompletion = async (text: string): Promise<string> => {
+export const streamChatCompletionFrontend = async (
+  messages: ApiChatMessage[]
+): Promise<ReadableStream<Uint8Array>> => {
+  // Point to the correct backend port
+  const STREAMING_API_URL = "http://localhost:3000/api/chat"; // Changed port to 3000
   try {
-    const response = await fetch(`${BACKEND_URL}/chat`, {
+    const response = await fetch(STREAMING_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify({ messages }), // Send the full message history
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || "Chat completion failed");
+      // Attempt to read error details, but handle cases where it might not be JSON
+      let errorDetails = `API request failed with status ${response.status}`;
+      try {
+        const errorJson = await response.json();
+        errorDetails = errorJson.error || errorJson.details || errorDetails;
+      } catch (e) {
+        // Ignore JSON parsing error if response body is not JSON
+      }
+      throw new Error(errorDetails);
     }
 
-    const { response: completion } = await response.json();
-    return completion;
+    if (!response.body) {
+      throw new Error("Response body is null");
+    }
+
+    // Return the readable stream directly
+    return response.body;
   } catch (error) {
-    console.error("Chat completion error:", error);
-    throw new Error(
-      `Chat completion error: ${
-        error instanceof Error ? error.message : String(error)
-      }`
-    );
+    console.error("Streaming chat completion error:", error);
+    // Re-throw the error to be handled by the calling hook
+    throw error;
   }
 };
