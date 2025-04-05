@@ -1,28 +1,10 @@
 /**
  * API service for handling transcription and chat completion
- * Using OpenAI SDK with Groq compatibility
+ * Now calls our backend API instead of direct model calls
  */
 import { invoke } from "@tauri-apps/api/core";
-import OpenAI from "openai";
-import {
-  GROQ_API_KEY,
-  GROQ_BASE_URL,
-  CHAT_MODELS,
-  TRANSCRIPTION_MODELS,
-  DEFAULT_SYSTEM_PROMPT,
-} from "./config";
 
-// Configure OpenAI client to use Groq API
-const openai = new OpenAI({
-  apiKey: GROQ_API_KEY,
-  baseURL: GROQ_BASE_URL,
-  dangerouslyAllowBrowser: true,
-});
-
-// Check if API key is available
-if (!GROQ_API_KEY) {
-  console.warn("GROQ_API_KEY is not set. API calls will fail.");
-}
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 /**
  * Creates a Blob from a base64 encoded string
@@ -66,21 +48,25 @@ export const fetchAudioData = async (): Promise<{
 };
 
 /**
- * Transcribes audio using OpenAI/Groq API
+ * Transcribes audio using our backend API
  */
 export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
   try {
-    // Create a File object from the Blob with a filename
-    const audioFile = new File([audioBlob], "recording.wav", {
-      type: "audio/wav",
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.wav");
+
+    const response = await fetch(`${BACKEND_URL}/transcribe`, {
+      method: "POST",
+      body: formData,
     });
 
-    const response = await openai.audio.transcriptions.create({
-      file: audioFile,
-      model: TRANSCRIPTION_MODELS.whisperLargeV3,
-    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Transcription failed");
+    }
 
-    return response.text;
+    const { text } = await response.json();
+    return text;
   } catch (error) {
     console.error("Transcription error:", error);
     throw new Error(
@@ -92,26 +78,25 @@ export const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
 };
 
 /**
- * Generates chat completion from transcription
+ * Generates chat completion using our backend API
  */
-export const generateChatCompletion = async (
-  transcription: string
-): Promise<string> => {
+export const generateChatCompletion = async (text: string): Promise<string> => {
   try {
-    const completion = await openai.chat.completions.create({
-      model: CHAT_MODELS.llama3,
-      messages: [
-        {
-          role: "system",
-          content: DEFAULT_SYSTEM_PROMPT,
-        },
-        { role: "user", content: transcription },
-      ],
-      temperature: 0.5,
-      max_tokens: 4000,
+    const response = await fetch(`${BACKEND_URL}/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ text }),
     });
 
-    return completion.choices[0].message.content || "";
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || "Chat completion failed");
+    }
+
+    const { response: completion } = await response.json();
+    return completion;
   } catch (error) {
     console.error("Chat completion error:", error);
     throw new Error(

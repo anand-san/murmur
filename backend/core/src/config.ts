@@ -1,11 +1,4 @@
-/**
- * API Configuration for external services
- */
-
-// Environment variables should be set in .env file with VITE_ prefix
-// to make them accessible in client-side code
-export const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY || "";
-
+export const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 // API endpoint paths

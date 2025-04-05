@@ -4,7 +4,7 @@
 
 // Transcription API
 export interface TranscriptionRequest {
-  audioBlob: Blob;
+  audio: File;
   model?: string;
 }
 
@@ -20,31 +20,15 @@ export interface ChatMessage {
 }
 
 export interface ChatCompletionRequest {
-  model: string;
-  messages: ChatMessage[];
+  text: string;
+  model?: string;
   temperature?: number;
   max_tokens?: number;
 }
 
 export interface ChatCompletionResponse {
-  id: string;
-  choices: {
-    message: {
-      role: string;
-      content: string;
-    };
-    finish_reason: string;
-    index: number;
-  }[];
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
+  stream: ReadableStream;
 }
-
-// Processing Status
-export type ProcessingState = "idle" | "processing" | "done" | "error";
 
 // Error types
 export interface ApiError {

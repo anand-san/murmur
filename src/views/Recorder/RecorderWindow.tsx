@@ -10,7 +10,8 @@ import {
   ResultsView,
   ErrorView,
 } from "./components/Views";
-import { useAudioProcessingPipeline, ProcessingState } from "./api";
+import { useAudioProcessingPipeline } from "./api";
+import { ProcessingState } from "./types";
 
 /**
  * RecorderWindow Component

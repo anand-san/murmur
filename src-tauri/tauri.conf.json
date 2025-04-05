@@ -35,7 +35,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' blob: data: media: https://api.groq.com; connect-src 'self' https://api.groq.com; script-src 'self' 'unsafe-eval';"
+      "csp": "default-src 'self' blob: data: media: http://localhost:3000; connect-src 'self' http://localhost:3000; script-src 'self' 'unsafe-eval';"
     }
   },
   "bundle": {
