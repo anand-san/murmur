@@ -211,7 +211,7 @@ pub fn run() {
                     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
                 };
 
-                let shortcut_key = Shortcut::new(Some(Modifiers::SHIFT), Code::Backquote);
+                let shortcut_key = Shortcut::new(Some(Modifiers::META), Code::Backquote);
 
                 if let Some(recorder_window) = app.get_webview_window("recorder") {
                     let _ = recorder_window.move_window(Position::TopRight);
