@@ -219,11 +219,14 @@ pub async fn run() { // Make run async
                     Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState,
                 };
 
-                let shortcut_key = Shortcut::new(Some(Modifiers::META), Code::Backquote);
+                // Define shortcuts
+                let recorder_shortcut = Shortcut::new(Some(Modifiers::META), Code::Backquote);
+                let ai_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Backquote); // ALT for Option key
 
                 // --- Recorder Window Setup ---
                 if let Some(recorder_window) = app.get_webview_window("recorder") {
-                    let _ = recorder_window.move_window(Position::BottomCenter);
+                    println!("Setting up recorder window (TopCenter, hidden)...");
+                    let _ = recorder_window.move_window(Position::TopCenter); // Changed position
                     let _ = recorder_window.hide();
 
                     // Handle OS close request
@@ -254,6 +257,18 @@ pub async fn run() { // Make run async
                     eprintln!("Failed to get recorder window during setup.");
                 }
 
+                // --- AI Interaction Window Setup ---
+                if let Some(ai_window) = app.get_webview_window("ai_interaction") {
+                    println!("Setting up AI interaction window (TopRight, hidden)...");
+                    let _ = ai_window.move_window(Position::TopRight); // Set position
+                    let _ = ai_window.hide(); // Hide initially
+                    // Optional: Add close handler if needed, similar to recorder
+                    // ai_window.on_window_event(...)
+                } else {
+                    eprintln!("Failed to get ai_interaction window during setup.");
+                }
+
+
                 // --- Global Shortcut Handler ---
                 // Need to clone states again for the handler's lifetime
                 let audio_config_handler = audio_config.clone();
@@ -276,7 +291,9 @@ pub async fn run() { // Make run async
                             // This prevents blocking the shortcut handler thread
                             tokio::spawn(async move {
                                 // Use the cloned shortcut value inside the async block
-                                if shortcut_clone == shortcut_key {
+
+                                // --- Recorder Shortcut Logic ---
+                                if shortcut_clone == recorder_shortcut {
                                     if let Some(recorder_window) = app_handle_clone.get_webview_window("recorder") {
                                         let mut current_app_state = app_state_clone.lock().await; // Use .await
 
@@ -524,17 +541,40 @@ pub async fn run() { // Make run async
                                     } else {
                                         eprintln!("Recorder window not found in shortcut handler.");
                                     }
+                                // --- AI Shortcut Logic ---
+                                } else if shortcut_clone == ai_shortcut {
+                                    if event.state() == ShortcutState::Pressed {
+                                        println!("AI Shortcut (Alt+`) Pressed: Showing AI Interaction Window");
+                                        if let Some(ai_window) = app_handle_clone.get_webview_window("ai_interaction") {
+                                            // Use tokio::spawn for window operations to avoid blocking handler
+                                            tokio::spawn(async move {
+                                                // Position might have already been set in setup, but setting again ensures it if setup failed
+                                                if let Err(e) = ai_window.move_window(Position::TopRight) { eprintln!("Failed to move ai_interaction window: {}", e); }
+                                                if let Err(e) = ai_window.show() { eprintln!("Failed to show ai_interaction window: {}", e); }
+                                                if let Err(e) = ai_window.set_focus() { eprintln!("Failed to focus ai_interaction window: {}", e); }
+                                            });
+                                        } else {
+                                            eprintln!("AI Interaction window not found in shortcut handler.");
+                                        }
+                                    }
+                                    // No specific action needed on release for the AI shortcut
                                 }
                             }); // End of outer tokio::spawn for handler logic
                         }) // End of with_handler closure
                         .build(),
                 )?;
 
-                // Register the shortcut
-                if let Err(e) = app.global_shortcut().register(shortcut_key) {
-                    eprintln!("Failed to register global shortcut: {}", e);
+                // Register the shortcuts
+                let shortcut_manager = app.global_shortcut();
+                if let Err(e) = shortcut_manager.register(recorder_shortcut.clone()) {
+                    eprintln!("Failed to register recorder shortcut (Meta+`): {}", e);
                 } else {
-                    println!("Global shortcut (Meta+`) registered successfully.");
+                    println!("Recorder shortcut (Meta+`) registered successfully.");
+                }
+                if let Err(e) = shortcut_manager.register(ai_shortcut.clone()) {
+                    eprintln!("Failed to register AI shortcut (Alt+`): {}", e);
+                } else {
+                    println!("AI shortcut (Alt+`) registered successfully.");
                 }
             }
             Ok(())

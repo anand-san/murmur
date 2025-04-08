@@ -8,7 +8,7 @@ const PulsingOrb = () => {
   };
 
   return (
-    <div className="relative flex items-center justify-center h-16 w-full">
+    <div className="relative flex items-center justify-center w-full">
       {/* Base Orb */}
       <motion.div
         className="absolute w-8 h-8 bg-blue-500 rounded-full"

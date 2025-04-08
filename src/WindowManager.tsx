@@ -44,17 +44,15 @@ const WindowManager = () => {
     case "recorder":
       return (
         <>
-          <div className="h-full grow bg-card/70 backdrop-blur-md rounded-md">
-            <RecorderWindow />
-          </div>
+          <RecorderWindow />
         </>
       );
     case "ai_interaction": // Add case for the new window
       return (
         <>
-          <div className="h-full grow bg-card/90 backdrop-blur-sm rounded-md">
+          <div className="h-[250px] grow bg-card/80 rounded-md">
             <div
-              className="absolute bg-background top-0 h-7 w-full z-50"
+              className="absolute top-0 h-7 w-full z-50"
               data-tauri-drag-region
             />
             <AiInteractionWindow />

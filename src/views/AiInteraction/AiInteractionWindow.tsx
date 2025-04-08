@@ -116,8 +116,8 @@ const AiInteractionWindow: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex flex-col h-full mt-4 p-4 bg-background text-foreground">
-      <ScrollArea className="flex-grow mb-4 p-2">
+    <div className="flex flex-col h-screen p-4 text-foreground">
+      <div className="flex-grow mb-4 p-2 overflow-auto">
         {aiResponse && <p className="whitespace-pre-wrap">{aiResponse}</p>}
         {error && <p className="text-red-500">Error: {error}</p>}
         {!aiResponse && !isLoading && !error && (
@@ -125,12 +125,12 @@ const AiInteractionWindow: React.FC = () => {
             Your response will appear here.
           </p>
         )}
-      </ScrollArea>
+      </div>
       <div className="flex gap-2">
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Your transcribed text..."
+          placeholder="Ask Anything"
           className="flex-grow"
           disabled={isLoading}
         />
