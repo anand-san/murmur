@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow as tauriWindow } from "@tauri-apps/api/window";
 import App from "./views/Main/App";
 import RecorderWindow from "./views/Recorder/RecorderWindow";
+import AiInteractionWindow from "./views/AiInteraction/AiInteractionWindow"; // Import the new component
 
 const WindowManager = () => {
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
@@ -30,6 +31,10 @@ const WindowManager = () => {
     case "main":
       return (
         <>
+          <div
+            className="absolute bg-background top-0 h-7 w-full z-50"
+            data-tauri-drag-region
+          />
           <div className="h-screen w-52 bg-gray-800/50"></div>
           <div className="h-screen grow bg-gray-700/60">
             <App />
@@ -41,6 +46,18 @@ const WindowManager = () => {
         <>
           <div className="h-full grow bg-card/70 backdrop-blur-md rounded-md">
             <RecorderWindow />
+          </div>
+        </>
+      );
+    case "ai_interaction": // Add case for the new window
+      return (
+        <>
+          <div className="h-full grow bg-card/90 backdrop-blur-sm rounded-md">
+            <div
+              className="absolute bg-background top-0 h-7 w-full z-50"
+              data-tauri-drag-region
+            />
+            <AiInteractionWindow />
           </div>
         </>
       );

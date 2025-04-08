@@ -449,8 +449,22 @@ pub async fn run() { // Make run async
                                                                 match api::transcribe_audio_local(wav_data).await {
                                                                     Ok(text) => {
                                                                         println!("Transcription successful: '{}'", text);
-                                                                        if let Err(e) = app_handle_post.emit("new_transcription", &serde_json::json!({ "text": text })) {
-                                                                             eprintln!("Failed to emit new_transcription event: {}", e);
+                                                                        // --- Handle AI Interaction Window Directly ---
+                                                                        if let Some(ai_window) = app_handle_post.get_webview_window("ai_interaction") {
+                                                                            println!("Found ai_interaction window, showing and sending data...");
+                                                                            let payload = serde_json::json!({ "text": text });
+                                                                            // Show, focus, and emit directly to the window
+                                                                            // Use a separate task to avoid blocking the post-processing flow if window interaction hangs
+                                                                            tokio::spawn(async move {
+                                                                                if let Err(e) = ai_window.show() { eprintln!("Failed to show ai_interaction window: {}", e); } // Removed .await
+                                                                                if let Err(e) = ai_window.set_focus() { eprintln!("Failed to focus ai_interaction window: {}", e); } // Removed .await
+                                                                                if let Err(e) = ai_window.emit("trigger_ai_interaction", &payload) {
+                                                                                    eprintln!("Failed to emit trigger_ai_interaction to ai_interaction window: {}", e);
+                                                                                }
+                                                                            });
+                                                                        } else {
+                                                                            eprintln!("Error: ai_interaction window not found. Cannot display transcription.");
+                                                                            // Optionally emit a global error event if needed
                                                                         }
                                                                     }
                                                                     Err(e) => {

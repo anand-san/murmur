@@ -2,11 +2,19 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "recorder"],
+  "windows": ["main", "recorder", "ai_interaction"],
   "permissions": [
     "core:default",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",
-    "global-shortcut:allow-unregister"
+    "global-shortcut:allow-unregister",
+    "core:app:allow-app-show",
+    "core:window:allow-show",
+    "core:webview:allow-webview-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-start-dragging"
   ]
 }

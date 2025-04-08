@@ -12,8 +12,8 @@ struct TranscriptionResponse {
 
 #[derive(Deserialize, Debug)]
 struct ChatResponse {
-    // Assuming the backend returns { "message": "..." } based on service.ts generateChatCompletion
-    message: String,
+    // Updated to match the actual backend response field {"response": "..."}
+    response: String,
 }
 
 // --- Constants ---
@@ -90,10 +90,13 @@ pub(crate) async fn transcribe_audio_local(wav_data: Vec<u8>) -> Result<String, 
 /// Sends transcription text to the local backend to get an AI response.
 pub(crate) async fn get_ai_response_local(transcription: String) -> Result<String, String> {
     // Use the lazy_static variable (dereference needed)
-    let url = format!("{}/chat", &*LOCAL_BACKEND_URL); // Endpoint from service.ts
+    let url = format!("{}/chat/nostream", &*LOCAL_BACKEND_URL); // Endpoint from service.ts (assuming it handles the messages format)
 
-    // Backend service.ts generateChatCompletion expects { "text": "..." }
-    let request_body = serde_json::json!({ "text": transcription });
+    // Backend expects { "messages": [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}] }
+    // based on the ZodError and StreamChatSchema in service.ts
+    let request_body = serde_json::json!({
+        "text": transcription
+    });
 
     println!(
         "Sending AI chat request to: {} with body: {}",
@@ -129,5 +132,5 @@ pub(crate) async fn get_ai_response_local(transcription: String) -> Result<Strin
     let result: ChatResponse = serde_json::from_str(&response_body)
         .map_err(|e| format!("Failed to parse AI chat JSON response: {}", e))?;
 
-    Ok(result.message) // Return the 'message' field based on ChatResponse struct
+    Ok(result.response) // Return the 'response' field based on the updated ChatResponse struct
 }

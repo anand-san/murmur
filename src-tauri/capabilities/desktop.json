@@ -1,6 +1,16 @@
 {
   "identifier": "desktop-capability",
   "platforms": ["macOS", "windows", "linux"],
-  "windows": ["main", "recorder"],
-  "permissions": ["global-shortcut:default"]
+  "windows": ["main", "recorder", "ai_interaction"],
+  "permissions": [
+    "global-shortcut:default",
+    "core:app:allow-app-show",
+    "core:window:allow-show",
+    "core:webview:allow-webview-show",
+    "core:window:allow-set-focus",
+    "core:window:allow-create",
+    "core:window:allow-close",
+    "core:window:allow-hide",
+    "core:window:allow-start-dragging"
+  ]
 }
