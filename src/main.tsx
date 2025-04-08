@@ -9,7 +9,14 @@ const RootComponent = () => {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <WindowManager />
+      <div className="flex">
+        <div
+          className="absolute top-0 h-7 w-full z-50"
+          data-tauri-drag-region
+        />
+
+        <WindowManager />
+      </div>
     </QueryClientProvider>
   );
 };

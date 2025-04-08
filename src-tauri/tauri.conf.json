@@ -17,25 +17,33 @@
         "title": "vaiced-tauri",
         "width": 400,
         "height": 550,
-        "visible": false
+        "visible": false,
+        "titleBarStyle": "Overlay",
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["blur", "acrylic"],
+          "radius": 20,
+          "color": "#000000"
+        }
       },
       {
         "label": "recorder",
         "title": "Recording",
         "width": 300,
-        "maxHeight": 300,
-        "decorations": false,
+        "height": 300,
+        "decorations": true,
         "alwaysOnTop": true,
         "hiddenTitle": true,
         "visible": false,
         "focus": false,
-        "resizable": false,
+        "resizable": true,
         "fullscreen": false,
         "maximized": false,
         "transparent": true,
+        "titleBarStyle": "Overlay",
         "windowEffects": {
           "effects": ["blur", "acrylic"],
-          "radius": 20,
+          "radius": 60,
           "color": "#000000"
         }
       }
@@ -53,6 +61,7 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": ["assets"]
   }
 }

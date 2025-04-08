@@ -1,126 +1,126 @@
 // Declare modules
 mod audio;
 mod state;
+mod api; // Declare the new api module
 
 // Use necessary items from modules and external crates
-use base64::{engine::general_purpose, Engine as _};
-use cpal::traits::{DeviceTrait, HostTrait}; // StreamTrait not needed directly here anymore
-use state::{AppStateRef, AudioState, AudioStateRef, RecorderState}; // Import state types
+use state::{
+    AppStateRef, AudioConfig, AudioConfigRef, // Use AudioConfigRef
+    RecorderState, RecordingFlag, // Use RecordingFlag (Removed SoundState, SoundStateRef)
+};
+use std::sync::atomic::{AtomicBool, Ordering}; // Use Atomics
+// Removed unused: use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 use tauri::Manager;
-use tauri::Emitter;
+use tauri::{Emitter, State, path::BaseDirectory}; // Added BaseDirectory
 use tauri_plugin_positioner::{Position, WindowExt};
+use cpal::traits::{DeviceTrait, HostTrait};
+use crossbeam_channel::unbounded; // Use crossbeam channel (Receiver import removed)
+use rodio::{Sink}; // Added rodio imports
+use std::fs::File; // Added File import
+use std::io::BufReader; // Added BufReader import
+
+// --- Helper Functions ---
+
+/// Emits a state change event to the frontend.
+fn emit_state_change(app_handle: &tauri::AppHandle, new_state: RecorderState) {
+    println!("Emitting state change: {:?}", new_state);
+    if let Err(e) = app_handle.emit("state_changed", &new_state) {
+        eprintln!("Failed to emit state_changed event: {}", e);
+    }
+}
+
+/// Helper function to create a WAV file structure in memory from raw PCM data (i16 little-endian).
+/// Moved here from audio.rs as it's used in the post-processing task.
+fn create_wav_memory(
+    pcm_data: &[i16], // Expecting Vec<i16> now
+    channels: u16,
+    sample_rate: u32,
+) -> Result<Vec<u8>, String> {
+    let bits_per_sample: u16 = 16;
+    let bytes_per_sample = bits_per_sample / 8; // Should be 2
+    let block_align = channels * bytes_per_sample;
+    let byte_rate = sample_rate * u32::from(block_align);
+
+    // Convert i16 samples to bytes
+    let pcm_data_bytes: Vec<u8> = pcm_data
+        .iter()
+        .flat_map(|&sample| sample.to_le_bytes())
+        .collect();
+    let data_size = pcm_data_bytes.len() as u32;
+
+    if data_size == 0 {
+        println!("Warning: Creating WAV from empty PCM data.");
+    }
+
+    let file_size = 36 + data_size;
+    let mut wav_data = Vec::with_capacity(44 + pcm_data_bytes.len());
+
+    // RIFF chunk descriptor
+    wav_data.extend_from_slice(b"RIFF");
+    wav_data.extend_from_slice(&file_size.to_le_bytes());
+    wav_data.extend_from_slice(b"WAVE");
+    // fmt sub-chunk
+    wav_data.extend_from_slice(b"fmt ");
+    wav_data.extend_from_slice(&16u32.to_le_bytes());
+    wav_data.extend_from_slice(&1u16.to_le_bytes()); // PCM
+    wav_data.extend_from_slice(&channels.to_le_bytes());
+    wav_data.extend_from_slice(&sample_rate.to_le_bytes());
+    wav_data.extend_from_slice(&byte_rate.to_le_bytes());
+    wav_data.extend_from_slice(&block_align.to_le_bytes());
+    wav_data.extend_from_slice(&bits_per_sample.to_le_bytes());
+    // data sub-chunk
+    wav_data.extend_from_slice(b"data");
+    wav_data.extend_from_slice(&data_size.to_le_bytes());
+    wav_data.extend_from_slice(&pcm_data_bytes);
+
+    Ok(wav_data)
+}
+
+/// Plays a sound file using rodio in a separate thread.
+fn play_sound_rodio(app_handle: &tauri::AppHandle, sound_name: &str) {
+    let sound_path = match app_handle.path().resolve(
+        format!("assets/sounds/{}", sound_name),
+        BaseDirectory::Resource,
+    ) {
+        Ok(path) => path,
+        Err(e) => {
+            eprintln!("Failed to resolve sound path for {}: {}", sound_name, e);
+            return;
+        }
+    };
+
+    // Spawn a thread to play the sound to avoid blocking
+    thread::spawn(move || {
+        match rodio::OutputStream::try_default() {
+            Ok((_stream, stream_handle)) => {
+                match File::open(&sound_path) {
+                    Ok(file) => {
+                        let file = BufReader::new(file);
+                        match rodio::Decoder::new(file) {
+                            Ok(source) => {
+                                let sink = Sink::try_new(&stream_handle).unwrap();
+                                sink.append(source);
+                                // Wait for the sound to finish playing before the thread exits
+                                sink.sleep_until_end();
+                                println!("Played sound: {:?}", sound_path);
+                            }
+                            Err(e) => eprintln!("Error decoding sound file {:?}: {}", sound_path, e),
+                        }
+                    }
+                    Err(e) => eprintln!("Error opening sound file {:?}: {}", sound_path, e),
+                }
+            }
+            Err(e) => eprintln!("Error getting default audio output stream: {}", e),
+        }
+    });
+}
+
 
 // --- Tauri Commands ---
 
-/// Record audio from the default input device and store in memory
-#[tauri::command]
-fn start_recording(state: tauri::State<'_, AudioStateRef>) -> Result<(), String> {
-    let mut audio_state = state.lock().map_err(|e| e.to_string())?;
-
-    if audio_state.is_recording {
-        println!("Warning: start_recording called while already recording.");
-        return Err("Recording is already in progress".to_string());
-    }
-
-    audio_state.audio_data = Some(Vec::new());
-    audio_state.is_recording = true;
-
-    let host = cpal::default_host();
-    let device = host
-        .default_input_device()
-        .ok_or_else(|| "No input device available".to_string())?;
-    let config = device
-        .default_input_config()
-        .map_err(|e| format!("Error getting default input config: {}", e))?;
-
-    // Store config details in state before releasing lock
-    audio_state.sample_rate = config.sample_rate().0;
-    audio_state.channels = config.channels();
-    let sample_format = config.sample_format(); // Get format before config is moved
-
-    drop(audio_state); // Release lock before spawning thread
-
-    let state_ref = state.inner().clone();
-    // Spawn thread to run the audio recording function from the audio module
-    thread::spawn(move || {
-        println!("Recording thread started.");
-        // Call the function from the audio module
-        if let Err(err) = audio::record_to_memory(state_ref.clone(), device, config, sample_format)
-        {
-            eprintln!("Recording error: {}", err);
-            // Ensure flag is reset on error
-            if let Ok(mut state_guard) = state_ref.lock() {
-                state_guard.is_recording = false;
-            }
-        }
-        println!("Recording thread finished.");
-    });
-
-    Ok(())
-}
-
-/// Stop recording audio
-#[tauri::command]
-fn stop_recording(state: tauri::State<'_, AudioStateRef>) -> Result<(), String> {
-    let mut audio_state = state.lock().map_err(|e| e.to_string())?;
-
-    if !audio_state.is_recording {
-        println!("Warning: stop_recording called but not in recording state.");
-        return Ok(());
-    }
-
-    println!("Setting is_recording flag to false.");
-    audio_state.is_recording = false;
-
-    Ok(())
-}
-
-/// Get recorded audio as base64 string for playback in frontend
-#[tauri::command]
-fn get_audio_data(state: tauri::State<'_, AudioStateRef>) -> Result<String, String> {
-    let audio_state = state.lock().map_err(|e| e.to_string())?;
-    let audio_data = audio_state
-        .audio_data
-        .as_ref()
-        .ok_or_else(|| "No recording available or recording failed".to_string())?;
-
-    if audio_data.is_empty() {
-        return Err("Recorded audio data is empty.".to_string());
-    }
-    let base64 = general_purpose::STANDARD.encode(audio_data);
-    Ok(base64)
-}
-
-/// Play the recorded audio in the backend (Optional)
-#[tauri::command]
-fn play_audio(state: tauri::State<'_, AudioStateRef>) -> Result<(), String> {
-    // Clone the audio data out of the mutex guard's scope
-    let audio_data_clone = {
-        let audio_state = state.lock().map_err(|e| e.to_string())?;
-        audio_state
-            .audio_data
-            .as_ref()
-            .cloned()
-            .ok_or_else(|| "No recording available".to_string())?
-    }; // Mutex guard dropped here
-
-    if audio_data_clone.is_empty() {
-        return Err("Cannot play empty audio data.".to_string());
-    }
-
-    // Spawn thread to run the playback function from the audio module
-    thread::spawn(move || {
-        // Call the function from the audio module
-        if let Err(err) = audio::play_audio_from_memory(&audio_data_clone) {
-            eprintln!("Error playing audio: {}", err);
-        }
-    });
-    Ok(())
-}
-
-/// Hide the main window (if used)
+/// Hide the main window (if used - kept for potential future use)
 #[tauri::command]
 fn hide_window(window: tauri::AppHandle) -> Result<(), String> {
     window
@@ -130,37 +130,42 @@ fn hide_window(window: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Handles request from frontend to close the recorder window and reset state.
+/// Show the main window (if used - kept for potential future use)
 #[tauri::command]
-fn request_close_recorder(
+fn show_window(window: tauri::AppHandle) -> Result<(), String> {
+    window
+        .get_webview_window("main")
+        .ok_or_else(|| "Main window not found".to_string())?
+        .show()
+        .map_err(|e| e.to_string())
+}
+
+/// Handles request from frontend or OS to close the recorder window and reset state.
+#[tauri::command]
+async fn request_close_recorder( // Make async to handle async mutex
     app_handle: tauri::AppHandle,
-    audio_state_ref: tauri::State<'_, AudioStateRef>,
-    app_state_ref: tauri::State<'_, AppStateRef>,
+    // audio_config_ref: State<'_, AudioConfigRef>, // Config doesn't need reset
+    app_state_ref: State<'_, AppStateRef>,
+    recording_flag: State<'_, RecordingFlag>, // Need flag to ensure it's set to false
 ) -> Result<(), String> {
     println!("Executing request_close_recorder command...");
 
-    // 1. Reset AudioState
-    {
-        let mut audio_state = audio_state_ref
-            .lock()
-            .map_err(|e| format!("Failed to lock AudioState: {}", e))?;
-        audio_state.is_recording = false;
-        audio_state.audio_data = None;
-        println!("Audio state reset.");
-    }
+    // 1. Ensure recording flag is false
+    recording_flag.store(false, Ordering::SeqCst);
+    println!("Recording flag set to false.");
 
-    // 2. Reset AppState
+    // 2. Reset AppState to Idle (using async lock)
     {
-        let mut app_state = app_state_ref
-            .lock()
-            .map_err(|e| format!("Failed to lock AppState: {}", e))?;
-        *app_state = RecorderState::Idle; // Use enum from state module
+        let mut app_state = app_state_ref.lock().await; // Use .await
+        *app_state = RecorderState::Idle;
         println!("App state reset to Idle.");
+        // Emit state change after resetting
+        emit_state_change(&app_handle, RecorderState::Idle);
     }
 
     // 3. Hide the recorder window
     if let Some(window) = app_handle.get_webview_window("recorder") {
-        println!("Hiding recorder window.");
+        println!("Hiding recorder window via request_close_recorder.");
         window
             .hide()
             .map_err(|e| format!("Failed to hide recorder window: {}", e))?;
@@ -171,40 +176,43 @@ fn request_close_recorder(
     Ok(())
 }
 
-/// Show the main window (if used)
+/// New command callable by the frontend to get AI response for given text.
 #[tauri::command]
-fn show_window(window: tauri::AppHandle) -> Result<(), String> {
-    window
-        .get_webview_window("main")
-        .ok_or_else(|| "Main window not found".to_string())?
-        .show()
-        .map_err(|e| e.to_string())
+async fn get_ai_response(
+    transcription: String,
+) -> Result<String, String> {
+    println!("Executing get_ai_response command for: '{}'", transcription);
+    api::get_ai_response_local(transcription).await
 }
+
 
 // --- Application Entry Point ---
 
+// Make run async because we use .await for mutexes inside setup/commands
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
-    // Use the constructor from the state module
-    let audio_state = AudioStateRef::new(std::sync::Mutex::new(AudioState::new()));
-    let app_state = AppStateRef::new(std::sync::Mutex::new(RecorderState::Idle));
+#[tokio::main] // Use tokio main runtime
+pub async fn run() { // Make run async
+    // Initialize states
+    let audio_config = AudioConfigRef::new(tokio::sync::Mutex::new(AudioConfig::new())); // Use tokio Mutex
+    let app_state = AppStateRef::new(tokio::sync::Mutex::new(RecorderState::Idle)); // Use tokio Mutex
+    let recording_flag = RecordingFlag::new(AtomicBool::new(false)); // Initialize recording flag
 
     tauri::Builder::default()
         .plugin(tauri_plugin_positioner::init())
         .invoke_handler(tauri::generate_handler![
-            // Commands remain the same, their implementation details changed
             hide_window,
             show_window,
-            start_recording,
-            stop_recording,
-            get_audio_data,
-            play_audio,
-            request_close_recorder
+            request_close_recorder, // Now async
+            get_ai_response
         ])
-        .manage(audio_state.clone()) // Manage state using imported types
+        .manage(audio_config.clone())
         .manage(app_state.clone())
+        .manage(recording_flag.clone()) // Manage the recording flag
+        // SoundStateRef management removed
         .setup(move |app| {
-            // Setup logic remains largely the same, using imported state types
+            // --- Initialize Sound State Removed ---
+
+            // --- Setup Global Shortcut ---
             #[cfg(desktop)]
             {
                 use tauri_plugin_global_shortcut::{
@@ -213,154 +221,289 @@ pub fn run() {
 
                 let shortcut_key = Shortcut::new(Some(Modifiers::META), Code::Backquote);
 
+                // --- Recorder Window Setup ---
                 if let Some(recorder_window) = app.get_webview_window("recorder") {
-                    let _ = recorder_window.move_window(Position::TopRight);
+                    let _ = recorder_window.move_window(Position::BottomCenter);
                     let _ = recorder_window.hide();
 
+                    // Handle OS close request
                     let app_handle_listener = app.handle().clone();
+                    let app_state_listener = app_state.clone();
+                    let recording_flag_listener = recording_flag.clone();
                     recorder_window.on_window_event(move |event| {
-                        if let tauri::WindowEvent::CloseRequested { .. } = event {
-                            println!("Window Close Requested (OS event)");
-                            {
-                                let app_state_listener_handle =
-                                    app_handle_listener.state::<AppStateRef>(); // Use imported type
-                                if let Ok(mut state) = app_state_listener_handle.lock() {
-                                    *state = RecorderState::Idle; // Use imported enum variant
-                                    println!("App state reset to Idle due to OS close event");
-                                } else {
-                                    eprintln!(
-                                        "Failed to lock AppState in OS close event listener"
-                                    );
-                                };
-                            }
+                         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                              println!("Recorder Window Close Requested (OS event)");
+                              api.prevent_close();
+                              let handle = app_handle_listener.clone();
+                              let _state = app_state_listener.clone(); // Prefixed unused var
+                              let _flag = recording_flag_listener.clone(); // Prefixed unused var
+                              // Spawn a task to run the async command
+                              tokio::spawn(async move {
+                                  // Get State wrappers inside the async task using the handle
+                                 let state_wrapper = handle.state::<AppStateRef>();
+                                  let flag_wrapper = handle.state::<RecordingFlag>();
+                                  let _ = request_close_recorder(
+                                      handle.clone(), // Clone handle to avoid move error
+                                      state_wrapper, // Pass the State wrapper
+                                      flag_wrapper, // Pass the State wrapper
+                                  ).await;
+                              });
                         }
                     });
                 } else {
                     eprintln!("Failed to get recorder window during setup.");
                 }
 
+                // --- Global Shortcut Handler ---
+                // Need to clone states again for the handler's lifetime
+                let audio_config_handler = audio_config.clone();
+                let app_state_handler = app_state.clone();
+                // sound_state_handler clone removed
+                let recording_flag_handler = recording_flag.clone();
+
                 app.handle().plugin(
                     tauri_plugin_global_shortcut::Builder::new()
-                        .with_handler({
-                            let audio_state_handler = audio_state.clone();
-                            let app_state_handler = app_state.clone();
+                        .with_handler(move |app, shortcut, event| {
+                            // Clone Arcs needed inside the async block
+                            let audio_config_clone = audio_config_handler.clone();
+                            let app_state_clone = app_state_handler.clone();
+                            // sound_state_clone clone removed
+                            let recording_flag_clone = recording_flag_handler.clone();
+                            let app_handle_clone = app.clone(); // Clone AppHandle
+                            let shortcut_clone = shortcut.clone(); // Clone shortcut value here
 
-                            move |app, shortcut, event| {
-                                if shortcut == &shortcut_key {
-                                    if let Some(recorder_window) =
-                                        app.get_webview_window("recorder")
-                                    {
-                                        let mut current_app_state =
-                                            app_state_handler.lock().unwrap();
+                            // Spawn a tokio task to handle the logic asynchronously
+                            // This prevents blocking the shortcut handler thread
+                            tokio::spawn(async move {
+                                // Use the cloned shortcut value inside the async block
+                                if shortcut_clone == shortcut_key {
+                                    if let Some(recorder_window) = app_handle_clone.get_webview_window("recorder") {
+                                        let mut current_app_state = app_state_clone.lock().await; // Use .await
 
                                         match event.state() {
+                                            // --- Shortcut Pressed ---
                                             ShortcutState::Pressed => {
                                                 match *current_app_state {
-                                                    RecorderState::Idle => { // Use imported enum variant
+                                                    RecorderState::Idle => {
                                                         println!("Shortcut Pressed: Idle -> Recording");
+                                                        *current_app_state = RecorderState::Recording;
+                                                        emit_state_change(&app_handle_clone, RecorderState::Recording);
+                                                        drop(current_app_state); // Release lock before sync operations
+
+                                                        // Show window & focus (sync)
                                                         let _ = recorder_window.show();
                                                         let _ = recorder_window.set_focus();
-                                                        {
-                                                            let mut audio_state_guard =
-                                                                audio_state_handler.lock().unwrap();
-                                                            audio_state_guard.is_recording = false;
-                                                            audio_state_guard.audio_data = None;
-                                                            println!(
-                                                                "Pre-recording audio state reset."
-                                                            );
-                                                        }
-                                                        // Call start_recording command
-                                                        match start_recording(
-                                                            app.state::<AudioStateRef>(), // Use imported type
-                                                        ) {
-                                                            Ok(_) => {
-                                                                *current_app_state =
-                                                                    RecorderState::Recording; // Use imported enum variant
-                                                                let _ = recorder_window.emit(
-                                                                    "recording-event",
-                                                                    serde_json::json!({
-                                                                        "type": "started"
-                                                                    }),
-                                                                );
-                                                            }
-                                                            Err(e) => {
-                                                                eprintln!(
-                                                                    "Failed to start recording via command: {}",
-                                                                    e
-                                                                );
+
+                                                        // Play start sound using rodio
+                                                        play_sound_rodio(&app_handle_clone, "record-start.mp3");
+
+                                                        // Reset recording flag (sync atomic)
+                                                        recording_flag_clone.store(false, Ordering::SeqCst); // Ensure false before setting true
+
+                                                        // Prepare for recording thread (sync cpal)
+                                                        let host = cpal::default_host();
+                                                        let device = match host.default_input_device() {
+                                                            Some(d) => d,
+                                                            None => {
+                                                                eprintln!("Error: No input device available");
+                                                                let mut state = app_state_clone.lock().await;
+                                                                *state = RecorderState::Idle; // Revert state
+                                                                emit_state_change(&app_handle_clone, RecorderState::Idle);
                                                                 let _ = recorder_window.hide();
-                                                                *current_app_state =
-                                                                    RecorderState::Idle; // Use imported enum variant
+                                                                return;
                                                             }
-                                                        }
-                                                    }
-                                                    RecorderState::Recording => { // Use imported enum variant
-                                                        println!(
-                                                            "Shortcut Pressed: Recording (Ignoring)"
-                                                        );
-                                                    }
-                                                    RecorderState::Processed => { // Use imported enum variant
-                                                        println!("Shortcut Pressed: Processed -> Idle (Closing Window)");
-                                                        let _ = recorder_window.hide();
+                                                        };
+                                                        let config = match device.default_input_config() {
+                                                            Ok(c) => c,
+                                                            Err(e) => {
+                                                                eprintln!("Error getting default input config: {}", e);
+                                                                let mut state = app_state_clone.lock().await;
+                                                                *state = RecorderState::Idle; // Revert state
+                                                                emit_state_change(&app_handle_clone, RecorderState::Idle);
+                                                                let _ = recorder_window.hide();
+                                                                return;
+                                                            }
+                                                        };
+
+                                                        // Store config details (async lock)
+                                                        let sample_format = config.sample_format();
                                                         {
-                                                            let mut audio_state_guard =
-                                                                audio_state_handler.lock().unwrap();
-                                                            audio_state_guard.is_recording = false;
-                                                            audio_state_guard.audio_data = None;
+                                                            let mut audio_config_guard = audio_config_clone.lock().await;
+                                                            audio_config_guard.sample_rate = config.sample_rate().0;
+                                                            audio_config_guard.channels = config.channels();
                                                         }
-                                                        *current_app_state = RecorderState::Idle; // Use imported enum variant
-                                                        println!("States reset manually on close from Processed state.");
+
+                                                        // Create channel for audio data (sync)
+                                                        let (tx, rx) = unbounded::<Vec<i16>>();
+
+                                                        // Set recording flag to true (sync atomic)
+                                                        recording_flag_clone.store(true, Ordering::SeqCst);
+
+                                                        // Spawn the synchronous recording thread (sync)
+                                                        let flag_thread = recording_flag_clone.clone();
+                                                        thread::spawn(move || {
+                                                            println!("Recording thread started.");
+                                                            if let Err(err) = audio::record_audio_stream(
+                                                                flag_thread.clone(), // Pass flag
+                                                                tx, // Pass sender
+                                                                device,
+                                                                config,
+                                                                sample_format,
+                                                            ) {
+                                                                eprintln!("Recording error: {}", err);
+                                                                // Ensure flag is reset on error
+                                                                flag_thread.store(false, Ordering::SeqCst);
+                                                            }
+                                                            println!("Recording thread finished.");
+                                                        });
+
+                                                        // Store receiver in App state or pass differently?
+                                                        // For simplicity, let's handle receiver in the release task
+                                                        // We need to pass 'rx' to the release handler's task.
+                                                        // This is tricky as the handler is recreated.
+                                                        // Alternative: Store Option<Receiver> in AppState? Risky.
+                                                        // Let's try creating the channel *outside* the handler if possible,
+                                                        // or manage it via a dedicated state.
+                                                        // --- Re-think: Create channel in setup, manage Sender/Receiver via state ---
+                                                        // This seems overly complex. Let's stick to creating channel on press
+                                                        // and passing receiver to the release task via another mechanism if needed.
+                                                        // --- Simplest: Pass receiver to the tokio task spawned on release ---
+                                                        // We can achieve this by storing the receiver temporarily, maybe in AppState?
+                                                        // Let's try storing Option<Receiver> in AppState for now.
+                                                        // **Correction:** No, AppState is shared. Cannot store receiver there easily.
+                                                        // **New Approach:** Spawn the post-processing task *here* on press,
+                                                        // but have it wait for the release signal (e.g., flag turning false).
+
+                                                        // --- Spawn Post-Processing Task on PRESS ---
+                                                        let app_handle_post = app_handle_clone.clone();
+                                                        let audio_config_post = audio_config_clone.clone();
+                                                        let app_state_post = app_state_clone.clone();
+                                                        // sound_state_post clone removed
+                                                        let recording_flag_post = recording_flag_clone.clone();
+
+                                                        tokio::spawn(async move {
+                                                            println!("Post-processing task spawned, waiting for recording flag...");
+
+                                                            // Wait until recording flag is set to false
+                                                            while recording_flag_post.load(Ordering::SeqCst) {
+                                                                tokio::time::sleep(Duration::from_millis(50)).await;
+                                                            }
+                                                            println!("Post-processing task detected recording stopped.");
+
+                                                            // --- Collect data from channel ---
+                                                            let mut all_pcm_data = Vec::new();
+                                                            while let Ok(chunk) = rx.try_recv() { // Use try_recv in a loop after flag is false
+                                                                all_pcm_data.extend(chunk);
+                                                            }
+                                                            // Drain any remaining items after loop (might be needed)
+                                                            while let Ok(chunk) = rx.try_recv() {
+                                                                all_pcm_data.extend(chunk);
+                                                            }
+                                                            println!("Collected {} samples from channel.", all_pcm_data.len());
+
+                                                            // Get config (async lock)
+                                                            let audio_config_guard = audio_config_post.lock().await;
+                                                            let sample_rate = audio_config_guard.sample_rate;
+                                                            let channels = audio_config_guard.channels;
+                                                            drop(audio_config_guard);
+
+                                                            if all_pcm_data.is_empty() {
+                                                                println!("Post-processing: Audio data is empty. Resetting state.");
+                                                                let mut state = app_state_post.lock().await;
+                                                                *state = RecorderState::Idle;
+                                                                emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                                return;
+                                                            }
+
+                                                            // Create WAV data
+                                                            let wav_data = match create_wav_memory(&all_pcm_data, channels, sample_rate) {
+                                                                Ok(data) => data,
+                                                                Err(e) => {
+                                                                    eprintln!("Failed to create WAV data: {}", e);
+                                                                    let mut state = app_state_post.lock().await;
+                                                                    *state = RecorderState::Idle;
+                                                                    emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                                    return;
+                                                                }
+                                                            };
+
+                                                            // Calculate duration
+                                                            let data_size = wav_data.len().saturating_sub(44);
+                                                            let bytes_per_sample = 2u32;
+                                                            let duration_secs = if sample_rate > 0 && channels > 0 {
+                                                                data_size as f32 / (sample_rate * u32::from(channels) * bytes_per_sample) as f32
+                                                            } else { 0.0 };
+                                                            println!("Post-processing: Calculated duration: {:.2}s", duration_secs);
+
+                                                            if duration_secs > 1.0 {
+                                                                println!("Post-processing: Duration > 1s. Starting transcription.");
+                                                                { // Set state to Transcribing
+                                                                    let mut state = app_state_post.lock().await;
+                                                                    *state = RecorderState::Transcribing;
+                                                                    emit_state_change(&app_handle_post, RecorderState::Transcribing);
+                                                                }
+
+                                                                // Play end sound call removed from here
+
+                                                                // Call transcription API
+                                                                match api::transcribe_audio_local(wav_data).await {
+                                                                    Ok(text) => {
+                                                                        println!("Transcription successful: '{}'", text);
+                                                                        if let Err(e) = app_handle_post.emit("new_transcription", &serde_json::json!({ "text": text })) {
+                                                                             eprintln!("Failed to emit new_transcription event: {}", e);
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        eprintln!("Transcription failed: {}", e);
+                                                                        if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ "stage": "transcription", "message": e })) {
+                                                                            eprintln!("Failed to emit processing_error event: {}", e_emit);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                println!("Post-processing: Duration <= 1s. Resetting state.");
+                                                            }
+
+                                                            // Reset state to Idle
+                                                            {
+                                                                let mut state = app_state_post.lock().await;
+                                                                *state = RecorderState::Idle;
+                                                                emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                            }
+                                                            println!("Post-processing task finished.");
+                                                        }); // End of post-processing tokio::spawn
+
+                                                    }
+                                                    RecorderState::Recording | RecorderState::Transcribing => {
+                                                        println!("Shortcut Pressed: State is {:?} (Ignoring)", *current_app_state);
                                                     }
                                                 }
                                             }
+                                            // --- Shortcut Released ---
                                             ShortcutState::Released => {
-                                                if let RecorderState::Recording = *current_app_state { // Use imported enum variant
-                                                    println!(
-                                                        "Shortcut Released: Recording -> Processed"
-                                                    );
-                                                    // Call stop_recording command
-                                                    match stop_recording(
-                                                        app.state::<AudioStateRef>(), // Use imported type
-                                                    ) {
-                                                        Ok(_) => {
-                                                            *current_app_state =
-                                                                RecorderState::Processed; // Use imported enum variant
-                                                            let _ = recorder_window.emit(
-                                                                "recording-event",
-                                                                serde_json::json!({
-                                                                    "type": "stopped"
-                                                                }),
-                                                            );
+                                                let current_state = *current_app_state; // Read state before releasing lock
+                                                drop(current_app_state); // Release lock
 
-                                                            let window_clone =
-                                                                recorder_window.clone();
-                                                            thread::spawn(move || {
-                                                                thread::sleep(Duration::from_millis(
-                                                                    250,
-                                                                )); // Wait for WAV finalization
-                                                                println!(
-                                                                    "Emitting ready-to-fetch event."
-                                                                );
-                                                                let _ = window_clone.emit(
-                                                                    "recording-event",
-                                                                    serde_json::json!({
-                                                                        "type": "ready-to-fetch"
-                                                                    }),
-                                                                );
-                                                            });
-                                                        }
-                                                        Err(e) => {
-                                                            eprintln!(
-                                                                "Failed to stop recording via command: {}",
-                                                                e
-                                                            );
-                                                            *current_app_state =
-                                                                RecorderState::Idle; // Reset on error
-                                                            let _ = recorder_window.hide();
-                                                        }
-                                                    }
+                                                if let RecorderState::Recording = current_state {
+                                                    println!("Shortcut Released: Recording -> Processing...");
+
+                                                    // 1. Immediately hide the window (sync)
+                                                    let _ = recorder_window.hide();
+
+                                                    // 2. Play end sound immediately on release
+                                                    play_sound_rodio(&app_handle_clone, "record-end.mp3");
+
+                                                    // 3. Signal recording thread and post-processing task to stop (sync atomic)
+                                                    println!("Setting recording flag to false.");
+                                                    recording_flag_clone.store(false, Ordering::SeqCst);
+
+                                                    // Post-processing task was already spawned on press and will detect the flag change.
+
                                                 } else {
                                                     println!("Shortcut Released: Not in Recording state (Ignoring)");
+                                                    if recorder_window.is_visible().unwrap_or(false) {
+                                                        let _ = recorder_window.hide();
+                                                    }
                                                 }
                                             }
                                         }
@@ -368,19 +511,26 @@ pub fn run() {
                                         eprintln!("Recorder window not found in shortcut handler.");
                                     }
                                 }
-                            }
-                        })
+                            }); // End of outer tokio::spawn for handler logic
+                        }) // End of with_handler closure
                         .build(),
                 )?;
 
+                // Register the shortcut
                 if let Err(e) = app.global_shortcut().register(shortcut_key) {
                     eprintln!("Failed to register global shortcut: {}", e);
                 } else {
-                    println!("Global shortcut (Shift+`) registered successfully.");
+                    println!("Global shortcut (Meta+`) registered successfully.");
                 }
             }
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!()) // Use build instead of run for async setup
+        .expect("error while building tauri application")
+        .run(|_app_handle, event| match event { // Use run loop for async runtime
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                api.prevent_exit();
+            }
+            _ => {}
+        });
 }

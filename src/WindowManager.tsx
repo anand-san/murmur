@@ -28,9 +28,22 @@ const WindowManager = () => {
   // Render the appropriate component based on the window label
   switch (windowLabel) {
     case "main":
-      return <App />;
+      return (
+        <>
+          <div className="h-screen w-52 bg-gray-800/50"></div>
+          <div className="h-screen grow bg-gray-700/60">
+            <App />
+          </div>
+        </>
+      );
     case "recorder":
-      return <RecorderWindow />;
+      return (
+        <>
+          <div className="h-full grow bg-card/70 backdrop-blur-md rounded-md">
+            <RecorderWindow />
+          </div>
+        </>
+      );
     default:
       return <div>Unknown window: {windowLabel}</div>;
   }

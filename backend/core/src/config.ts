@@ -9,7 +9,7 @@ export const API_ENDPOINTS = {
 
 // Chat models
 export const CHAT_MODELS = {
-  llama3: "llama-3.3-70b-versatile",
+  llama3: "deepseek-r1-distill-llama-70b",
 };
 
 // Transcription models
