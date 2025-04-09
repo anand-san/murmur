@@ -1,24 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import React, { useEffect, useRef, MutableRefObject } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
   type CloseRequestedEvent,
-} from "@tauri-apps/api/window"; // Import CloseRequestedEvent
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { Loader2, SendIcon } from "lucide-react";
-
+} from "@tauri-apps/api/window";
+import { Assistant } from "./assistant";
 interface TranscriptionPayload {
   text: string;
 }
 
+// Function type for sending messages
+type SendMessageFn = (text: string) => void;
+
 const AiInteractionWindow: React.FC = () => {
-  const [aiResponse, setAiResponse] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
   const unlistenRef = useRef<UnlistenFn | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const sendMessageRef = useRef<SendMessageFn | null>(null);
 
   useEffect(() => {
     const appWindow = getCurrentWindow();
@@ -28,15 +24,13 @@ const AiInteractionWindow: React.FC = () => {
         "trigger_ai_interaction",
         (event) => {
           console.log("Received trigger_ai_interaction event:", event.payload);
-          // setAiResponse(null); // Clear previous response
-          // setError(null); // Clear previous error
-          // setIsLoading(false); // Ensure loading is off initially
           // Optional: Bring window to front if needed
           appWindow.setFocus();
-          if (inputRef.current) {
-            inputRef.current.value = event.payload.text; // Set input value from event
+
+          // Automatically send the message if text is provided
+          if (sendMessageRef.current && event.payload.text) {
+            sendMessageRef.current(event.payload.text);
           }
-          handleSend(event.payload.text); // Automatically send the transcription to AI
         }
       );
     };
@@ -81,66 +75,9 @@ const AiInteractionWindow: React.FC = () => {
     };
   }, []); // Empty dependency array ensures this runs once
 
-  const handleManualSend = useCallback(async () => {
-    console.log("Manual send triggered with input:", inputRef.current?.value);
-    if (!inputRef?.current?.value || inputRef.current?.value.trim() === "") {
-      setError("Input text cannot be empty.");
-      return;
-    }
-    const textToSend = inputRef.current.value;
-    handleSend(textToSend);
-    // Clear input after manual send is initiated
-    // inputRef.current.value = ""; // Clearing is now handled within handleSend on success
-  }, []); // Added handleSend dependency
-
-  const handleSend = useCallback(async (text: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response: string = await invoke("get_ai_response", {
-        transcription: text,
-      });
-      setAiResponse(response);
-      // Clear input field on successful send
-      if (inputRef.current) {
-        inputRef.current.value = "";
-      }
-    } catch (err) {
-      console.error("Error getting AI response:", err);
-      setError(typeof err === "string" ? err : "Failed to get AI response.");
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
   return (
-    <div className="flex flex-col h-screen p-4 text-foreground">
-      <div className="flex-grow mb-4 p-2 overflow-auto">
-        {aiResponse && <p className="whitespace-pre-wrap">{aiResponse}</p>}
-        {error && <p className="text-red-500">Error: {error}</p>}
-        {!aiResponse && !isLoading && !error && (
-          <p className="text-muted-foreground">
-            Your response will appear here.
-          </p>
-        )}
-      </div>
-      <div className="flex gap-2">
-        <Input
-          ref={inputRef}
-          type="text"
-          placeholder="Ask Anything"
-          className="flex-grow"
-          disabled={isLoading}
-        />
-        <Button
-          onClick={handleManualSend}
-          disabled={isLoading} // Disable only when loading, allow sending empty if desired (or add trim check back if needed)
-          // Or keep the trim check: disabled={isLoading || !inputRef.current?.value?.trim()}
-        >
-          {isLoading ? <Loader2 className="animate-spin" /> : <SendIcon />}
-        </Button>
-      </div>
+    <div className="flex flex-col h-screen text-foreground">
+      <Assistant sendMessageRef={sendMessageRef} />
     </div>
   );
 };

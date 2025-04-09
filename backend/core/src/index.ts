@@ -11,8 +11,7 @@ import {
 } from "./service";
 import { zValidator } from "@hono/zod-validator";
 import { cors } from "hono/cors";
-import { CoreMessage } from "ai"; // Import CoreMessage for type casting
-// StreamingTextResponse might not be needed if we return directly
+import { CoreMessage, jsonSchema } from "ai"; // Import CoreMessage and jsonSchema for AI SDK
 
 const app = new Hono();
 
@@ -76,13 +75,15 @@ app.post(
   zValidator("json", StreamChatSchema), // Validate using the streaming schema
   async (c) => {
     try {
-      const { messages } = c.req.valid("json"); // Get the message history
+      const { messages, system } = c.req.valid("json"); // Get messages and system prompt
 
-      // Call the streaming service function, casting messages to CoreMessage[]
-      const result = await streamChatCompletion(messages as CoreMessage[]); // result is StreamTextResult
+      // Call the streaming service function without tools for now
+      const result = await streamChatCompletion(
+        messages as CoreMessage[],
+        system
+      );
 
-      // Convert the result to the AI SDK RSC format using toDataStreamResponse
-      // Hono's context 'c' is not directly compatible, so we return the Response object directly
+      // Convert the result to the AI SDK RSC format
       return result.toDataStreamResponse();
     } catch (error) {
       console.error("Streaming chat error:", error);

@@ -77,32 +77,29 @@ export const generateChatCompletion = async (text: string): Promise<string> => {
 };
 
 /**
- * Generates a streaming chat completion using @ai-sdk/openai provider configured for Groq.
+ * Generates a streaming chat completion using @ai-sdk/openai provider.
  * Returns the full StreamTextResult object.
  */
 export const streamChatCompletion = async (
-  messages: CoreMessage[]
+  messages: CoreMessage[],
+  system?: string,
+  tools?: Record<string, { parameters: any }>
 ): Promise<StreamTextResult<any, any>> => {
-  // Provide two type arguments
-  // Update return type
   try {
     if (!GROQ_API_KEY) {
-      throw new Error("GROQ_API_KEY is not configured");
+      throw new Error("API key is not configured");
     }
 
-    // Use the explicitly configured Groq provider instance
+    // Create the streamText configuration
     const result = await streamText({
-      model: groq(CHAT_MODELS.llama3), // Pass the model name to the configured provider instance
-      messages: [
-        // Ensure system prompt is included if needed, or handle it in the input messages array
-        { role: "system", content: DEFAULT_SYSTEM_PROMPT }, // Example: Prepending system prompt
-        ...messages, // Pass the provided message history
-      ],
+      model: groq(CHAT_MODELS.llama3), // Default to Groq, can be changed for provider flexibility
+      messages,
+      system: system || DEFAULT_SYSTEM_PROMPT,
+      tools,
       temperature: 0.5,
-      maxTokens: 4000, // Renamed from max_tokens for streamText
+      maxTokens: 4000,
     });
 
-    // Return the full result object directly
     return result;
   } catch (error) {
     console.error("Streaming chat completion error:", error);
@@ -129,8 +126,19 @@ export const StreamChatSchema = z.object({
   messages: z.array(
     z.object({
       role: z.enum(["user", "assistant", "system", "tool"]), // Adjust roles as needed
-      content: z.string(),
+      content: z.union([
+        z.string(),
+        z.array(
+          z.object({
+            type: z.string(),
+            text: z.string().optional(),
+            // Other content type fields can be added as needed
+          })
+        ),
+      ]),
       // Add other potential fields like 'tool_calls', 'tool_call_id' if using tools
     })
   ),
+  system: z.string().optional(),
+  tools: z.any().optional(), // Accept any tools format to handle different client implementations
 });

@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import WindowManager from "./WindowManager";
-import "./global.css";
+import "./styles/globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 // Interface no longer needed here
