@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, MutableRefObject } from "react";
+import React, { useEffect, useRef } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import {
   getCurrentWindow,
@@ -76,7 +76,7 @@ const AiInteractionWindow: React.FC = () => {
   }, []); // Empty dependency array ensures this runs once
 
   return (
-    <div className="flex flex-col h-screen text-foreground">
+    <div className="flex flex-col h-full text-foreground">
       <Assistant sendMessageRef={sendMessageRef} />
     </div>
   );

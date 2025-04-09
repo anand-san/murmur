@@ -1,4 +1,3 @@
-import React from "react";
 import ReactDOM from "react-dom/client";
 import WindowManager from "./WindowManager";
 import "./styles/globals.css";
@@ -22,7 +21,5 @@ const RootComponent = () => {
   );
 };
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <RootComponent />
-  </React.StrictMode>
+  <RootComponent />
 );
