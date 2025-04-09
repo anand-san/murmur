@@ -1,0 +1,15 @@
+version: "3.8" # Specify the Compose file version
+
+services:
+  core-app: # Define the service name
+    build:
+      context: . # Use the Dockerfile in the current directory (backend/core)
+      dockerfile: Dockerfile # Specify the Dockerfile name
+    ports:
+      - "3000:3000" # Map host port 3000 to container port 3000
+    env_file:
+      - .env # Load environment variables from the .env file in the same directory
+    environment:
+      # Define environment variables directly
+      PORT: 3000
+    restart: unless-stopped # Restart policy
