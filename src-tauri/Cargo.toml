@@ -16,6 +16,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
+dotenvy = "0.15"
 
 [dependencies]
 tauri = { version = "2", features = ["macos-private-api", "tray-icon"] }
@@ -29,7 +30,6 @@ bytes = "1.4"
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 mime = "0.3"
 lazy_static = "1.4"
-dotenvy = "0.15"
 crossbeam-channel = "0.5"
 tauri-plugin-http = { version = "2", features = ["multipart", "json"] }
 xcap = "0.4.1" # Replaced screenshots with xcap

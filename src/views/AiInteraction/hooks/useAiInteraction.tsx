@@ -1,9 +1,13 @@
 import { UnlistenFn, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow, CloseRequestedEvent } from "@tauri-apps/api/window";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
+import { useTranscription } from "./useTranscription";
+import { useClipboardPaste } from "./useClipboard";
 
-interface TranscriptionPayload {
-  text: string;
+// Interface for the audio data payload from backend
+interface AudioDataPayload {
+  data: number[];
+  isClipboardMode: boolean;
 }
 
 export type RecorderState = "idle" | "recording" | "transcribing";
@@ -12,34 +16,122 @@ export type SendMessageFn = (text: string) => void;
 export type SetTranscriptionStatusFn = (isTranscribing: RecorderState) => void;
 
 export default function useAiInteraction() {
-  const unlistenTriggerRef = useRef<UnlistenFn | null>(null);
   const unlistenStateRef = useRef<UnlistenFn | null>(null); // Ref for state listener
+  const unlistenAudioDataRef = useRef<UnlistenFn | null>(null); // Ref for audio data listener
   const sendMessageRef = useRef<SendMessageFn | null>(null);
   const setTranscriptionStatusRef = useRef<SetTranscriptionStatusFn | null>(
     null
   );
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [currentMode, setCurrentMode] = useState<"normal" | "clipboard" | null>(
+    null
+  );
 
-  // Triggered when transcription is ready and message can be sent to AI
+  // Use the React Query hooks
+  const transcriptionMutation = useTranscription();
+  const clipboardPasteMutation = useClipboardPaste();
+
+  // Triggered when backend sends the audio data
   useEffect(() => {
     const appWindow = getCurrentWindow();
-    const setupTriggerListener = async () => {
-      unlistenTriggerRef.current = await listen<TranscriptionPayload>(
-        "trigger_ai_interaction",
-        (event) => {
-          appWindow.setFocus();
-          if (sendMessageRef.current && event.payload.text) {
-            sendMessageRef.current(event.payload.text);
+    const setupAudioDataListener = async () => {
+      unlistenAudioDataRef.current = await listen<AudioDataPayload>(
+        "audio_data_available",
+        async (event) => {
+          // Extract the data and metadata early so it's available in both try and catch blocks
+          const isClipboardMode = event.payload.isClipboardMode || false;
+
+          try {
+            console.log("Received audio data from backend");
+            console.log(
+              `Processing in ${isClipboardMode ? "clipboard" : "normal"} mode`
+            );
+
+            // Update the current mode
+            setCurrentMode(isClipboardMode ? "clipboard" : "normal");
+
+            // Convert the array to Uint8Array
+            const wavData = new Uint8Array(event.payload.data || event.payload);
+
+            // Create a Blob and File object from the audio data
+            const wavBlob = new Blob([wavData], { type: "audio/wav" });
+            const wavFile = new File([wavBlob], "recording.wav", {
+              type: "audio/wav",
+            });
+
+            // Only update UI status for normal mode, not clipboard mode
+            if (!isClipboardMode && setTranscriptionStatusRef.current) {
+              setTranscriptionStatusRef.current("transcribing");
+            }
+
+            // Send to transcription API using the mutation
+            try {
+              const transcriptionText = await transcriptionMutation.mutateAsync(
+                wavFile
+              );
+              console.log("Transcription successful:", transcriptionText);
+
+              // Process based on mode
+              if (isClipboardMode) {
+                // Clipboard mode - call backend to handle paste operation
+                try {
+                  console.log("Executing clipboard paste operation");
+                  await clipboardPasteMutation.mutateAsync(transcriptionText);
+                  console.log("Clipboard paste operation completed");
+                } catch (error) {
+                  console.error("Failed clipboard paste operation:", error);
+                  setErrorMessage(
+                    `Clipboard operation failed: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`
+                  );
+                }
+              } else {
+                // Normal mode - Send the transcription to AI
+                if (sendMessageRef.current && transcriptionText) {
+                  appWindow.setFocus();
+                  sendMessageRef.current(transcriptionText);
+                }
+              }
+            } catch (error) {
+              console.error("Failed to transcribe audio:", error);
+              setErrorMessage(
+                `Transcription failed: ${
+                  error instanceof Error ? error.message : String(error)
+                }`
+              );
+            } finally {
+              // Reset transcription status (only for normal mode)
+              if (!isClipboardMode && setTranscriptionStatusRef.current) {
+                setTranscriptionStatusRef.current("idle");
+              }
+              // Always reset the current mode when done
+              setCurrentMode(null);
+            }
+          } catch (error) {
+            console.error("Error processing audio data:", error);
+            setErrorMessage(
+              `Error processing audio: ${
+                error instanceof Error ? error.message : String(error)
+              }`
+            );
+            // Reset transcription status on error (only for normal mode)
+            if (!isClipboardMode && setTranscriptionStatusRef.current) {
+              setTranscriptionStatusRef.current("idle");
+            }
+            // Always reset the current mode when done
+            setCurrentMode(null);
           }
         }
       );
     };
 
-    setupTriggerListener();
+    setupAudioDataListener();
 
     return () => {
-      if (unlistenTriggerRef.current) {
-        unlistenTriggerRef.current();
-        unlistenTriggerRef.current = null;
+      if (unlistenAudioDataRef.current) {
+        unlistenAudioDataRef.current();
+        unlistenAudioDataRef.current = null;
       }
     };
   }, []);
@@ -100,5 +192,10 @@ export default function useAiInteraction() {
   return {
     sendMessageRef,
     setTranscriptionStatusRef,
+    errorMessage,
+    // Only show transcription UI indicator for normal mode operations
+    isTranscribing:
+      (currentMode === "normal" || currentMode === null) &&
+      transcriptionMutation.isPending,
   };
 }

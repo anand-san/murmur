@@ -1,5 +1,4 @@
 // Declare modules
-mod api;
 mod audio;
 mod screenshot; // Declare the screenshot module
 mod state; // Declare the new api module
@@ -148,13 +147,79 @@ fn show_window(window: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-// request_close_recorder command removed
-
-/// New command callable by the frontend to get AI response for given text.
+/// Command to perform clipboard paste operations on macOS
 #[tauri::command]
-async fn get_ai_response(transcription: String) -> Result<String, String> {
-    println!("Executing get_ai_response command for: '{}'", transcription);
-    api::get_ai_response_local(transcription).await
+async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> Result<(), String> {
+    println!("Executing perform_clipboard_paste command for text: '{}'", text);
+    
+    // 1. Save current clipboard content
+    use tauri_plugin_clipboard_manager::ClipboardExt;
+    let previous_clipboard = app_handle.clipboard().read_text().unwrap_or_default();
+    println!("Saved current clipboard content");
+
+    // 2. Copy new text to clipboard
+    if let Err(e) = app_handle.clipboard().write_text(text.clone()) {
+        return Err(format!("Failed to write to clipboard: {}", e));
+    }
+    println!("Text successfully copied to clipboard");
+
+    // 3. Give focus back to the previous window before pasting
+    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await; // Short delay
+
+    // 4. Simulate Paste using AppleScript on macOS
+    #[cfg(target_os = "macos")]
+    {
+        println!("Attempting to simulate paste via AppleScript using shell plugin...");
+        use tauri_plugin_shell::ShellExt;
+        
+        let script = r#"tell application "System Events" to keystroke "v" using command down"#;
+        let shell = app_handle.shell(); // Get the shell instance
+        let output_result = shell
+            .command("osascript")
+            .args(["-e", script])
+            .output() // Execute and wait for output
+            .await;
+
+        match output_result {
+            Ok(output) => {
+                if output.status.success() {
+                    println!("AppleScript paste command executed successfully.");
+                    if !output.stdout.is_empty() {
+                        println!("osascript stdout: {}", String::from_utf8_lossy(&output.stdout));
+                    }
+                } else {
+                    eprintln!("AppleScript paste command failed with status: {:?}", output.status);
+                    if !output.stderr.is_empty() {
+                        eprintln!("osascript stderr: {}", String::from_utf8_lossy(&output.stderr));
+                    }
+                    return Err(format!("AppleScript execution failed: {:?}", output.status));
+                }
+            }
+            Err(e) => {
+                eprintln!("Failed to execute osascript for paste using shell plugin: {}", e);
+                return Err(format!("Failed to execute AppleScript: {}", e));
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // On other platforms, we don't attempt to paste
+        println!("Automatic paste via script not supported on this OS.");
+    }
+
+    // 5. Wait a bit before restoring the clipboard
+    tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+    // 6. Restore original clipboard content
+    if let Err(e) = app_handle.clipboard().write_text(previous_clipboard) {
+        eprintln!("Failed to restore clipboard: {}", e);
+        return Err(format!("Failed to restore clipboard: {}", e));
+    }
+    println!("Original clipboard content restored after paste and delay");
+
+    // 7. No sound needed for clipboard operation
+    
+    Ok(())
 }
 
 // --- Application Entry Point ---
@@ -177,9 +242,8 @@ pub async fn run() {
         .invoke_handler(tauri::generate_handler![
             hide_window,
             show_window,
-            // request_close_recorder removed
-            get_ai_response,
-            screenshot::capture_screenshot // Add the new command
+            perform_clipboard_paste,
+            screenshot::capture_screenshot
         ])
         .manage(audio_config.clone())
         .manage(app_state.clone())
@@ -477,36 +541,41 @@ pub async fn run() {
 
                                                                 // Play end sound call removed from here
 
-                                                                // Call transcription API
-                                                                match api::transcribe_audio_local(wav_data).await {
-                                                                    Ok(text) => {
-                                                                        println!("Transcription successful: '{}'", text);
-                                                                        // --- Handle Main (AI Interaction) Window Directly ---
-                                                                        if let Some(main_window) = app_handle_post.get_webview_window("main") {
-                                                                            println!("Found main (AI interaction) window, sending data...");
-                                                                            let payload = serde_json::json!({ "text": text });
-                                                                            // Emit directly to the main window
-                                                                            // Use a separate task to avoid blocking the post-processing flow if window interaction hangs
-                                                                            tokio::spawn(async move {
-                                                                                // Ensure window is visible and focused before emitting
-                                                                                if let Err(e) = main_window.show() { eprintln!("Failed to show main window: {}", e); }
-                                                                                if let Err(e) = main_window.set_focus() { eprintln!("Failed to focus main window: {}", e); }
-                                                                                if let Err(e) = main_window.emit("trigger_ai_interaction", &payload) {
-                                                                                    eprintln!("Failed to emit trigger_ai_interaction to main window: {}", e);
-                                                                                }
-                                                                            });
-                                                                        } else {
-                                                                            eprintln!("Error: main window not found. Cannot display transcription.");
-                                                                            // Optionally emit a global error event if needed
-                                                                        }
-                                                                    }
-                                                                    Err(e) => {
-                                                                        eprintln!("Transcription failed: {}", e);
-                                                                        if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ "stage": "transcription", "message": e })) {
-                                                                            eprintln!("Failed to emit processing_error event: {}", e_emit);
-                                                                        }
-                                                                    }
-                                                                }
+                                                println!("Sending WAV audio data to frontend for transcription. Size: {} bytes", wav_data.len());
+                                                
+                                                // --- Handle Main (AI Interaction) Window Directly ---
+                                                if let Some(main_window) = app_handle_post.get_webview_window("main") {
+                                                    println!("Found main (AI interaction) window, sending audio data...");
+                                                    
+                                                    // Use a separate task to avoid blocking the post-processing flow
+                                                    let wav_data_clone = wav_data.clone();
+                                                    tokio::spawn(async move {
+                                                        // Ensure window is visible and focused before emitting
+                                                        if let Err(e) = main_window.show() { eprintln!("Failed to show main window: {}", e); }
+                                                        if let Err(e) = main_window.set_focus() { eprintln!("Failed to focus main window: {}", e); }
+                                                        
+                                                        // Create a payload with the WAV data and metadata
+                                                        let payload = serde_json::json!({
+                                                            "data": wav_data_clone,
+                                                            "isClipboardMode": false
+                                                        });
+                                                        
+                                                        // Send WAV data to frontend via event
+                                                        if let Err(e) = main_window.emit("audio_data_available", payload) {
+                                                            eprintln!("Failed to emit audio_data_available to main window: {}", e);
+                                                        } else {
+                                                            println!("Audio data sent to frontend successfully");
+                                                        }
+                                                    });
+                                                } else {
+                                                    eprintln!("Error: main window not found. Cannot send audio data.");
+                                                    if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ 
+                                                        "stage": "audio_transfer", 
+                                                        "message": "Main window not found" 
+                                                    })) {
+                                                        eprintln!("Failed to emit processing_error event: {}", e_emit);
+                                                    }
+                                                }
                                                             } else {
                                                                 println!("Post-processing: Duration <= 1s. Playing end sound and resetting state.");
                                                                 // Play end sound only for short recordings
@@ -719,86 +788,36 @@ pub async fn run() {
                                                                     emit_state_change(&app_handle_post, RecorderState::Transcribing);
                                                                 }
 
-                                                                // Call transcription API
-                                                                match api::transcribe_audio_local(wav_data).await {
-                                                                    Ok(text) => {
-                                                                        println!("Clipboard transcription successful: '{}'", text);
-
-                                                                        // Clipboard management with paste operation
-                                                                        use tauri_plugin_clipboard_manager::ClipboardExt;
-                                                                        #[cfg(target_os = "macos")]
-                                                                        use tauri_plugin_shell::ShellExt; // Use the shell plugin extension trait
-
-                                                                        // Read current clipboard content
-                                                                        let previous_clipboard = app_handle_post.clipboard().read_text().unwrap_or_default();
-                                                                        println!("Saved current clipboard content");
-
-                                                                        // Copy to clipboard
-                                                                        if let Err(e) = app_handle_post.clipboard().write_text(text.clone()) {
-                                                                            eprintln!("Failed to write to clipboard: {}", e);
+                                                                // Instead of handling transcription in the backend,
+                                                                // send the WAV data to the frontend with metadata indicating clipboard mode
+                                                                println!("Sending clipboard WAV audio data to frontend. Size: {} bytes", wav_data.len());
+                                                                
+                                                                // --- Handle Main (AI Interaction) Window ---
+                                                                if let Some(main_window) = app_handle_post.get_webview_window("main") {
+                                                                    println!("Found main window, sending audio data for clipboard operation...");
+                                                                    
+                                                                    // Create a payload with the WAV data and metadata
+                                                                    let payload = serde_json::json!({
+                                                                        "data": wav_data,
+                                                                        "isClipboardMode": true
+                                                                    });
+                                                                    
+                                                                    // Use a separate task to avoid blocking the post-processing flow
+                                                                    tokio::spawn(async move {
+                                                                        // Send WAV data to frontend via event with clipboard mode flag
+                                                                        if let Err(e) = main_window.emit("audio_data_available", payload) {
+                                                                            eprintln!("Failed to emit audio_data_available to main window: {}", e);
                                                                         } else {
-                                                                            println!("Text successfully copied to clipboard");
-
-                                                                            // Give focus back to the previous window before pasting
-                                                                            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await; // Short delay
-
-                                                                            // Simulate Paste using AppleScript on macOS
-                                                                            #[cfg(target_os = "macos")]
-                                                                            {
-                                                                                println!("Attempting to simulate paste via AppleScript using shell plugin...");
-                                                                                let script = r#"tell application "System Events" to keystroke "v" using command down"#;
-                                                                                let shell = app_handle_post.shell(); // Get the shell instance
-                                                                                let output_result = shell
-                                                                                    .command("osascript")
-                                                                                    .args(["-e", script])
-                                                                                    .output() // Execute and wait for output
-                                                                                    .await;
-
-                                                                                match output_result {
-                                                                                    Ok(output) => {
-                                                                                        if output.status.success() {
-                                                                                            println!("AppleScript paste command executed successfully.");
-                                                                                            if !output.stdout.is_empty() {
-                                                                                                println!("osascript stdout: {}", String::from_utf8_lossy(&output.stdout));
-                                                                                            }
-                                                                                        } else {
-                                                                                            eprintln!("AppleScript paste command failed with status: {:?}", output.status); // Use Debug format
-                                                                                            if !output.stderr.is_empty() {
-                                                                                                eprintln!("osascript stderr: {}", String::from_utf8_lossy(&output.stderr));
-                                                                                            }
-                                                                                        }
-                                                                                    }
-                                                                                    Err(e) => {
-                                                                                        eprintln!("Failed to execute osascript for paste using shell plugin: {}", e);
-                                                                                    }
-                                                                                }
-                                                                            }
-                                                                            #[cfg(not(target_os = "macos"))]
-                                                                            {
-                                                                                // On other platforms, we can't use AppleScript.
-                                                                                println!("Automatic paste via script not supported on this OS.");
-                                                                            }
-
-
-                                                                            // Wait a bit before restoring the clipboard
-                                                                            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await; // Keep delay
-
-                                                                            // Restore original clipboard content
-                                                                            if let Err(e) = app_handle_post.clipboard().write_text(previous_clipboard) {
-                                                                                eprintln!("Failed to restore clipboard: {}", e);
-                                                                            } else {
-                                                                                println!("Original clipboard content restored after paste and delay");
-                                                                            }
-
-                                                                            // Play end sound for clipboard operation
-                                                                            play_sound_rodio(&app_handle_post, "record-end.mp3");
+                                                                            println!("Audio data with clipboard flag sent to frontend");
                                                                         }
-                                                                    }
-                                                                    Err(e) => {
-                                                                        eprintln!("Clipboard transcription failed: {}", e);
-                                                                        if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ "stage": "transcription", "message": e })) {
-                                                                            eprintln!("Failed to emit processing_error event: {}", e_emit);
-                                                                        }
+                                                                    });
+                                                                } else {
+                                                                    eprintln!("Error: main window not found. Cannot send audio data for clipboard.");
+                                                                    if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ 
+                                                                        "stage": "audio_transfer", 
+                                                                        "message": "Main window not found" 
+                                                                    })) {
+                                                                        eprintln!("Failed to emit processing_error event: {}", e_emit);
                                                                     }
                                                                 }
                                                             } else {
