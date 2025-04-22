@@ -32,26 +32,6 @@
           "radius": 60,
           "color": "#000000"
         }
-      },
-      {
-        "label": "recorder",
-        "title": "Vaiced - Recorder",
-        "width": 200,
-        "height": 100,
-        "decorations": false,
-        "alwaysOnTop": true,
-        "hiddenTitle": true,
-        "visible": false,
-        "focus": false,
-        "resizable": false,
-        "fullscreen": false,
-        "maximized": false,
-        "transparent": true,
-        "windowEffects": {
-          "effects": ["blur", "acrylic"],
-          "radius": 60,
-          "color": "#000000"
-        }
       }
     ],
     "security": {

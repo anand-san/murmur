@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow as tauriWindow } from "@tauri-apps/api/window";
-import RecorderWindow from "./views/Recorder/RecorderWindow";
 import AiInteractionWindow from "./views/AiInteraction/AiInteractionWindow"; // Import the new component
 
 const WindowManager = () => {
@@ -37,12 +36,6 @@ const WindowManager = () => {
             />
             <AiInteractionWindow />
           </div>
-        </>
-      );
-    case "recorder":
-      return (
-        <>
-          <RecorderWindow />
         </>
       );
     default:

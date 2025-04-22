@@ -148,42 +148,7 @@ fn show_window(window: tauri::AppHandle) -> Result<(), String> {
         .map_err(|e| e.to_string())
 }
 
-/// Handles request from frontend or OS to close the recorder window and reset state.
-#[tauri::command]
-async fn request_close_recorder(
-    // Make async to handle async mutex
-    app_handle: tauri::AppHandle,
-    // audio_config_ref: State<'_, AudioConfigRef>, // Config doesn't need reset
-    app_state_ref: State<'_, AppStateRef>,
-    recording_flag: State<'_, RecordingFlag>, // Need flag to ensure it's set to false
-) -> Result<(), String> {
-    println!("Executing request_close_recorder command...");
-
-    // 1. Ensure recording flag is false
-    recording_flag.store(false, Ordering::SeqCst);
-    println!("Recording flag set to false.");
-
-    // 2. Reset AppState to Idle (using async lock)
-    {
-        let mut app_state = app_state_ref.lock().await; // Use .await
-        *app_state = RecorderState::Idle;
-        println!("App state reset to Idle.");
-        // Emit state change after resetting
-        emit_state_change(&app_handle, RecorderState::Idle);
-    }
-
-    // 3. Hide the recorder window
-    if let Some(window) = app_handle.get_webview_window("recorder") {
-        println!("Hiding recorder window via request_close_recorder.");
-        window
-            .hide()
-            .map_err(|e| format!("Failed to hide recorder window: {}", e))?;
-    } else {
-        eprintln!("Recorder window not found during request_close_recorder.");
-    }
-
-    Ok(())
-}
+// request_close_recorder command removed
 
 /// New command callable by the frontend to get AI response for given text.
 #[tauri::command]
@@ -212,7 +177,7 @@ pub async fn run() {
         .invoke_handler(tauri::generate_handler![
             hide_window,
             show_window,
-            request_close_recorder, // Now async
+            // request_close_recorder removed
             get_ai_response,
             screenshot::capture_screenshot // Add the new command
         ])
@@ -295,36 +260,7 @@ pub async fn run() {
                 let ai_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Backquote); // ALT for Option key
                 let clipboard_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::Backquote); // CTRL for clipboard functionality
 
-                if let Some(recorder_window) = app.get_webview_window("recorder") {
-                    let _ = recorder_window.move_window(Position::TopCenter); 
-                    let _ = recorder_window.hide();
-
-                    let app_handle_listener = app.handle().clone();
-                    let app_state_listener = app_state.clone();
-                    let recording_flag_listener = recording_flag.clone();
-                    recorder_window.on_window_event(move |event| {
-                         if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                              println!("Recorder Window Close Requested (OS event)");
-                              api.prevent_close();
-                              let handle = app_handle_listener.clone();
-                              let _state = app_state_listener.clone(); // Prefixed unused var
-                              let _flag = recording_flag_listener.clone(); // Prefixed unused var
-                              // Spawn a task to run the async command
-                              tokio::spawn(async move {
-                                  // Get State wrappers inside the async task using the handle
-                                 let state_wrapper = handle.state::<AppStateRef>();
-                                  let flag_wrapper = handle.state::<RecordingFlag>();
-                                  let _ = request_close_recorder(
-                                      handle.clone(), // Clone handle to avoid move error
-                                      state_wrapper, // Pass the State wrapper
-                                      flag_wrapper, // Pass the State wrapper
-                                  ).await;
-                              });
-                        }
-                    });
-                } else {
-                    eprintln!("Failed to get recorder window during setup.");
-                }
+                // Recorder window setup block removed.
 
                 // --- AI Interaction Window Setup (Now the Main Window) ---
                 if let Some(main_window) = app.get_webview_window("main") {
@@ -364,10 +300,10 @@ pub async fn run() {
 
                                 // --- Recorder Shortcut Logic ---
                                 if shortcut_clone == recorder_shortcut {
-                                    if let Some(recorder_window) = app_handle_clone.get_webview_window("recorder") {
-                                        let mut current_app_state = app_state_clone.lock().await; // Use .await
+                                    // Removed: if let Some(recorder_window) = ...
+                                    let mut current_app_state = app_state_clone.lock().await; // Use .await
 
-                                        match event.state() {
+                                    match event.state() {
                                             // --- Shortcut Pressed ---
                                             ShortcutState::Pressed => {
                                                 match *current_app_state {
@@ -386,14 +322,7 @@ pub async fn run() {
                                                             }
                                                         };
 
-                                                        // Show window (sync) - Only if main window wasn't visible
-                                                        if !main_window_visible {
-                                                            println!("Main window not visible. Showing recorder window.");
-                                                            let _ = recorder_window.show();
-                                                            // Removed: let _ = recorder_window.set_focus(); - Let OS handle focus
-                                                        } else {
-                                                            println!("Main window is visible. Skipping recorder window display.");
-                                                        }
+                                                        // Removed recorder window show/hide logic
                                                         // --- End Check ---
 
 
@@ -412,7 +341,7 @@ pub async fn run() {
                                                                 let mut state = app_state_clone.lock().await;
                                                                 *state = RecorderState::Idle; // Revert state
                                                                 emit_state_change(&app_handle_clone, RecorderState::Idle);
-                                                                let _ = recorder_window.hide();
+                                                                // Removed: let _ = recorder_window.hide();
                                                                 return;
                                                             }
                                                         };
@@ -423,7 +352,7 @@ pub async fn run() {
                                                                 let mut state = app_state_clone.lock().await;
                                                                 *state = RecorderState::Idle; // Revert state
                                                                 emit_state_change(&app_handle_clone, RecorderState::Idle);
-                                                                let _ = recorder_window.hide();
+                                                                // Removed: let _ = recorder_window.hide();
                                                                 return;
                                                             }
                                                         };
@@ -607,8 +536,7 @@ pub async fn run() {
                                                 if let RecorderState::Recording = current_state {
                                                     println!("Shortcut Released: Recording -> Processing...");
 
-                                                    // 1. Immediately hide the window (sync)
-                                                    let _ = recorder_window.hide();
+                                                    // 1. Removed recorder_window.hide() call
 
                                                     // 2. Play end sound call removed from here - moved to post-processing task for short recordings
 
@@ -620,15 +548,11 @@ pub async fn run() {
 
                                                 } else {
                                                     println!("Shortcut Released: Not in Recording state (Ignoring)");
-                                                    if recorder_window.is_visible().unwrap_or(false) {
-                                                        let _ = recorder_window.hide();
-                                                    }
+                                                    // Removed recorder_window.hide() check and call
                                                 }
                                             }
                                         }
-                                    } else {
-                                        eprintln!("Recorder window not found in shortcut handler.");
-                                    }
+                                    // Removed: else block for recorder_window not found
                                 // --- AI Shortcut Logic ---
                                 } else if shortcut_clone == ai_shortcut {
                                     if event.state() == ShortcutState::Pressed {
@@ -649,10 +573,10 @@ pub async fn run() {
                                 }
                                 // --- Clipboard Shortcut Logic ---
                                 else if shortcut_clone == clipboard_shortcut {
-                                    if let Some(recorder_window) = app_handle_clone.get_webview_window("recorder") {
-                                        let mut current_app_state = app_state_clone.lock().await; // Use .await
+                                    // Removed: if let Some(recorder_window) = ...
+                                    let mut current_app_state = app_state_clone.lock().await; // Use .await
 
-                                        match event.state() {
+                                    match event.state() {
                                             // --- Shortcut Pressed ---
                                             ShortcutState::Pressed => {
                                                 match *current_app_state {
@@ -662,9 +586,7 @@ pub async fn run() {
                                                         emit_state_change(&app_handle_clone, RecorderState::Recording);
                                                         drop(current_app_state); // Release lock before sync operations
 
-                                                        // Show window & focus (sync)
-                                                        let _ = recorder_window.show();
-                                                        let _ = recorder_window.set_focus();
+                                                        // Removed recorder window show/focus logic
 
                                                         // Play start sound using rodio (always play)
                                                         play_sound_rodio(&app_handle_clone, "record-start.mp3");
@@ -681,7 +603,7 @@ pub async fn run() {
                                                                 let mut state = app_state_clone.lock().await;
                                                                 *state = RecorderState::Idle; // Revert state
                                                                 emit_state_change(&app_handle_clone, RecorderState::Idle);
-                                                                let _ = recorder_window.hide();
+                                                                // Removed: let _ = recorder_window.hide();
                                                                 return;
                                                             }
                                                         };
@@ -692,7 +614,7 @@ pub async fn run() {
                                                                 let mut state = app_state_clone.lock().await;
                                                                 *state = RecorderState::Idle; // Revert state
                                                                 emit_state_change(&app_handle_clone, RecorderState::Idle);
-                                                                let _ = recorder_window.hide();
+                                                                // Removed: let _ = recorder_window.hide();
                                                                 return;
                                                             }
                                                         };
@@ -907,8 +829,7 @@ pub async fn run() {
                                                 if let RecorderState::Recording = current_state {
                                                     println!("Clipboard Shortcut Released: Recording -> Processing...");
 
-                                                    // 1. Immediately hide the window (sync)
-                                                    let _ = recorder_window.hide();
+                                                    // 1. Removed recorder_window.hide() call
 
                                                     // 2. Signal recording thread and post-processing task to stop (sync atomic)
                                                     println!("Setting recording flag to false for clipboard.");
@@ -917,15 +838,11 @@ pub async fn run() {
                                                     // Post-processing task was already spawned on press and will detect the flag change.
                                                 } else {
                                                     println!("Clipboard Shortcut Released: Not in Recording state (Ignoring)");
-                                                    if recorder_window.is_visible().unwrap_or(false) {
-                                                        let _ = recorder_window.hide();
-                                                    }
+                                                    // Removed recorder_window.hide() check and call
                                                 }
                                             }
                                         }
-                                    } else {
-                                        eprintln!("Recorder window not found in clipboard shortcut handler.");
-                                    }
+                                    // Removed: else block for recorder_window not found
                                 }
                             }); // End of outer tokio::spawn for handler logic
                         }) // End of with_handler closure
