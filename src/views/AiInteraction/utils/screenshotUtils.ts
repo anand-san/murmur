@@ -183,3 +183,26 @@ export async function captureAndAnalyzeScreenshot(
     throw error;
   }
 }
+
+export const handleAnalyzeScreen = async () => {
+  try {
+    const screenshot = await captureScreenshot();
+    if (!screenshot) {
+      console.error("Failed to capture screenshot");
+      // TODO: Show user feedback
+      return;
+    }
+    // Show loading state? Maybe append a temporary message?
+    const result = await processImageWithVision(screenshot); // Assuming this returns text
+    if (!result) {
+      console.error("Failed to process image");
+      // TODO: Show user feedback
+      return;
+    }
+    // TODO: Decide how to use the 'result' (e.g., display it, append it?)
+    console.log("Screen Analysis Result:", result);
+  } catch (error) {
+    console.error("Error analyzing screen:", error);
+    // TODO: Show user feedback
+  }
+};
