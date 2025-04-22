@@ -123,20 +123,19 @@ export const ChatCompletionSchema = z.object({
 // Schema for streaming chat request
 export const StreamChatSchema = z.object({
   messages: z.array(
-    z.object({
-      role: z.enum(["user", "assistant", "system", "tool"]), // Adjust roles as needed
-      content: z.union([
-        z.string(),
-        z.array(
-          z.object({
-            type: z.string(),
-            text: z.string().optional(),
-            // Other content type fields can be added as needed
-          })
-        ),
-      ]),
-      // Add other potential fields like 'tool_calls', 'tool_call_id' if using tools
-    })
+    z.custom<CoreMessage>(
+      (val) => {
+        return (
+          typeof val === "object" &&
+          val !== null &&
+          "role" in val &&
+          typeof (val as any).role === "string"
+        );
+      },
+      {
+        message: "Must be a valid CoreMessage with at least a role property",
+      }
+    )
   ),
   system: z.string().optional(),
   tools: z.any().optional(), // Accept any tools format to handle different client implementations

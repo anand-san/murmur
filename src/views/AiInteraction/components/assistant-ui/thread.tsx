@@ -24,6 +24,11 @@ import { RecorderState } from "../../hooks/useAiInteraction";
 import RecordingIndicator from "../../../../components/RecordingIndicator";
 import TranscribingIndicator from "../../../../components/TranscribingIndicator";
 import ModelSelectorSheet from "../ModelSelectorSheet";
+import {
+  ComposerAddAttachment,
+  ComposerAttachments,
+  UserMessageAttachments,
+} from "./attachment";
 
 interface ThreadProps {
   recorderState?: RecorderState; // Add the prop
@@ -130,6 +135,8 @@ const ThreadWelcome: FC = () => {
 const Composer: FC = () => {
   return (
     <ComposerPrimitive.Root className="focus-within:border-ring/20 flex w-full flex-wrap items-end rounded-lg border bg-background/80 px-2.5 shadow-sm transition-colors ease-in">
+      <ComposerAttachments />
+      <ComposerAddAttachment />
       <ComposerPrimitive.Input
         rows={2}
         autoFocus
@@ -174,6 +181,7 @@ const UserMessage: FC = () => {
   return (
     <MessagePrimitive.Root className="grid auto-rows-auto grid-cols-[minmax(72px,1fr)_auto] gap-y-2 [&:where(>*)]:col-start-2 w-full max-w-[var(--thread-max-width)] py-4">
       <UserActionBar />
+      <UserMessageAttachments />
 
       <div className="bg-muted/60 text-foreground max-w-[calc(var(--thread-max-width)*0.8)] break-words rounded-3xl px-5 py-2.5 col-start-2 row-start-2">
         <MessagePrimitive.Content />
