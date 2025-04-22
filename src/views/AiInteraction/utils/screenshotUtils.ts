@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { Event, UnlistenFn, listen, once } from "@tauri-apps/api/event";
+import { UnlistenFn, listen, once } from "@tauri-apps/api/event";
 import { API_BASE } from "./constants";
 
 // Status type for screenshot progress updates
@@ -7,14 +7,6 @@ interface ScreenshotStatus {
   status: string; // "processing", "idle", "error"
   progress?: number;
   error?: string;
-}
-
-// Result type for the screenshot data
-interface ScreenshotResult {
-  image_data: number[]; // Raw binary data as array of bytes
-  width: number;
-  height: number;
-  mime_type: string; // e.g., "image/png"
 }
 
 // Status callback type

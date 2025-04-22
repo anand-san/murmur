@@ -205,6 +205,8 @@ pub async fn run() {
     let recording_flag = RecordingFlag::new(AtomicBool::new(false)); // Initialize recording flag
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init()) // Initialize shell plugin
+        .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
         .plugin(tauri_plugin_positioner::init())
         .invoke_handler(tauri::generate_handler![
@@ -291,6 +293,7 @@ pub async fn run() {
 
                 let recorder_shortcut = Shortcut::new(Some(Modifiers::META), Code::Backquote);
                 let ai_shortcut = Shortcut::new(Some(Modifiers::ALT), Code::Backquote); // ALT for Option key
+                let clipboard_shortcut = Shortcut::new(Some(Modifiers::CONTROL), Code::Backquote); // CTRL for clipboard functionality
 
                 if let Some(recorder_window) = app.get_webview_window("recorder") {
                     let _ = recorder_window.move_window(Position::TopCenter); 
@@ -383,11 +386,11 @@ pub async fn run() {
                                                             }
                                                         };
 
-                                                        // Show window & focus (sync) - Only if main window wasn't visible
+                                                        // Show window (sync) - Only if main window wasn't visible
                                                         if !main_window_visible {
                                                             println!("Main window not visible. Showing recorder window.");
                                                             let _ = recorder_window.show();
-                                                            let _ = recorder_window.set_focus();
+                                                            // Removed: let _ = recorder_window.set_focus(); - Let OS handle focus
                                                         } else {
                                                             println!("Main window is visible. Skipping recorder window display.");
                                                         }
@@ -644,6 +647,286 @@ pub async fn run() {
                                     }
                                     // No specific action needed on release for the AI shortcut
                                 }
+                                // --- Clipboard Shortcut Logic ---
+                                else if shortcut_clone == clipboard_shortcut {
+                                    if let Some(recorder_window) = app_handle_clone.get_webview_window("recorder") {
+                                        let mut current_app_state = app_state_clone.lock().await; // Use .await
+
+                                        match event.state() {
+                                            // --- Shortcut Pressed ---
+                                            ShortcutState::Pressed => {
+                                                match *current_app_state {
+                                                    RecorderState::Idle => {
+                                                        println!("Clipboard Shortcut Pressed: Idle -> Recording");
+                                                        *current_app_state = RecorderState::Recording;
+                                                        emit_state_change(&app_handle_clone, RecorderState::Recording);
+                                                        drop(current_app_state); // Release lock before sync operations
+
+                                                        // Show window & focus (sync)
+                                                        let _ = recorder_window.show();
+                                                        let _ = recorder_window.set_focus();
+
+                                                        // Play start sound using rodio (always play)
+                                                        play_sound_rodio(&app_handle_clone, "record-start.mp3");
+
+                                                        // Reset recording flag (sync atomic)
+                                                        recording_flag_clone.store(false, Ordering::SeqCst); // Ensure false before setting true
+
+                                                        // Prepare for recording thread (sync cpal)
+                                                        let host = cpal::default_host();
+                                                        let device = match host.default_input_device() {
+                                                            Some(d) => d,
+                                                            None => {
+                                                                eprintln!("Error: No input device available");
+                                                                let mut state = app_state_clone.lock().await;
+                                                                *state = RecorderState::Idle; // Revert state
+                                                                emit_state_change(&app_handle_clone, RecorderState::Idle);
+                                                                let _ = recorder_window.hide();
+                                                                return;
+                                                            }
+                                                        };
+                                                        let config = match device.default_input_config() {
+                                                            Ok(c) => c,
+                                                            Err(e) => {
+                                                                eprintln!("Error getting default input config: {}", e);
+                                                                let mut state = app_state_clone.lock().await;
+                                                                *state = RecorderState::Idle; // Revert state
+                                                                emit_state_change(&app_handle_clone, RecorderState::Idle);
+                                                                let _ = recorder_window.hide();
+                                                                return;
+                                                            }
+                                                        };
+
+                                                        // Store config details (async lock)
+                                                        let sample_format = config.sample_format();
+                                                        {
+                                                            let mut audio_config_guard = audio_config_clone.lock().await;
+                                                            audio_config_guard.sample_rate = config.sample_rate().0;
+                                                            audio_config_guard.channels = config.channels();
+                                                        }
+
+                                                        // Create channel for audio data (sync)
+                                                        let (tx, rx) = unbounded::<Vec<i16>>();
+
+                                                        // Set recording flag to true (sync atomic)
+                                                        recording_flag_clone.store(true, Ordering::SeqCst);
+
+                                                        // Spawn the synchronous recording thread (sync)
+                                                        let flag_thread = recording_flag_clone.clone();
+                                                        thread::spawn(move || {
+                                                            println!("Recording thread started for clipboard.");
+                                                            if let Err(err) = audio::record_audio_stream(
+                                                                flag_thread.clone(), // Pass flag
+                                                                tx, // Pass sender
+                                                                device,
+                                                                config,
+                                                                sample_format,
+                                                            ) {
+                                                                eprintln!("Recording error: {}", err);
+                                                                // Ensure flag is reset on error
+                                                                flag_thread.store(false, Ordering::SeqCst);
+                                                            }
+                                                            println!("Recording thread finished for clipboard.");
+                                                        });
+
+                                                        // --- Spawn Post-Processing Task on PRESS ---
+                                                        let app_handle_post = app_handle_clone.clone();
+                                                        let audio_config_post = audio_config_clone.clone();
+                                                        let app_state_post = app_state_clone.clone();
+                                                        let recording_flag_post = recording_flag_clone.clone();
+
+                                                        tokio::spawn(async move {
+                                                            println!("Clipboard post-processing task spawned, waiting for recording flag...");
+
+                                                            // Wait until recording flag is set to false
+                                                            while recording_flag_post.load(Ordering::SeqCst) {
+                                                                tokio::time::sleep(Duration::from_millis(50)).await;
+                                                            }
+                                                            println!("Clipboard post-processing task detected recording stopped.");
+
+                                                            // --- Collect data from channel ---
+                                                            let mut all_pcm_data = Vec::new();
+                                                            while let Ok(chunk) = rx.try_recv() { // Use try_recv in a loop after flag is false
+                                                                all_pcm_data.extend(chunk);
+                                                            }
+                                                            // Drain any remaining items after loop (might be needed)
+                                                            while let Ok(chunk) = rx.try_recv() {
+                                                                all_pcm_data.extend(chunk);
+                                                            }
+                                                            println!("Collected {} samples from channel for clipboard.", all_pcm_data.len());
+
+                                                            // Get config (async lock)
+                                                            let audio_config_guard = audio_config_post.lock().await;
+                                                            let sample_rate = audio_config_guard.sample_rate;
+                                                            let channels = audio_config_guard.channels;
+                                                            drop(audio_config_guard);
+
+                                                            if all_pcm_data.is_empty() {
+                                                                println!("Clipboard post-processing: Audio data is empty. Resetting state.");
+                                                                let mut state = app_state_post.lock().await;
+                                                                *state = RecorderState::Idle;
+                                                                emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                                return;
+                                                            }
+
+                                                            // Create WAV data
+                                                            let wav_data = match create_wav_memory(&all_pcm_data, channels, sample_rate) {
+                                                                Ok(data) => data,
+                                                                Err(e) => {
+                                                                    eprintln!("Failed to create WAV data for clipboard: {}", e);
+                                                                    let mut state = app_state_post.lock().await;
+                                                                    *state = RecorderState::Idle;
+                                                                    emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                                    return;
+                                                                }
+                                                            };
+
+                                                            // Calculate duration
+                                                            let data_size = wav_data.len().saturating_sub(44);
+                                                            let bytes_per_sample = 2u32;
+                                                            let duration_secs = if sample_rate > 0 && channels > 0 {
+                                                                data_size as f32 / (sample_rate * u32::from(channels) * bytes_per_sample) as f32
+                                                            } else { 0.0 };
+                                                            println!("Clipboard post-processing: Calculated duration: {:.2}s", duration_secs);
+
+                                                            if duration_secs > 1.0 {
+                                                                println!("Clipboard post-processing: Duration > 1s. Starting transcription.");
+                                                                { // Set state to Transcribing
+                                                                    let mut state = app_state_post.lock().await;
+                                                                    *state = RecorderState::Transcribing;
+                                                                    emit_state_change(&app_handle_post, RecorderState::Transcribing);
+                                                                }
+
+                                                                // Call transcription API
+                                                                match api::transcribe_audio_local(wav_data).await {
+                                                                    Ok(text) => {
+                                                                        println!("Clipboard transcription successful: '{}'", text);
+
+                                                                        // Clipboard management with paste operation
+                                                                        use tauri_plugin_clipboard_manager::ClipboardExt;
+                                                                        #[cfg(target_os = "macos")]
+                                                                        use tauri_plugin_shell::ShellExt; // Use the shell plugin extension trait
+
+                                                                        // Read current clipboard content
+                                                                        let previous_clipboard = app_handle_post.clipboard().read_text().unwrap_or_default();
+                                                                        println!("Saved current clipboard content");
+
+                                                                        // Copy to clipboard
+                                                                        if let Err(e) = app_handle_post.clipboard().write_text(text.clone()) {
+                                                                            eprintln!("Failed to write to clipboard: {}", e);
+                                                                        } else {
+                                                                            println!("Text successfully copied to clipboard");
+
+                                                                            // Give focus back to the previous window before pasting
+                                                                            tokio::time::sleep(tokio::time::Duration::from_millis(200)).await; // Short delay
+
+                                                                            // Simulate Paste using AppleScript on macOS
+                                                                            #[cfg(target_os = "macos")]
+                                                                            {
+                                                                                println!("Attempting to simulate paste via AppleScript using shell plugin...");
+                                                                                let script = r#"tell application "System Events" to keystroke "v" using command down"#;
+                                                                                let shell = app_handle_post.shell(); // Get the shell instance
+                                                                                let output_result = shell
+                                                                                    .command("osascript")
+                                                                                    .args(["-e", script])
+                                                                                    .output() // Execute and wait for output
+                                                                                    .await;
+
+                                                                                match output_result {
+                                                                                    Ok(output) => {
+                                                                                        if output.status.success() {
+                                                                                            println!("AppleScript paste command executed successfully.");
+                                                                                            if !output.stdout.is_empty() {
+                                                                                                println!("osascript stdout: {}", String::from_utf8_lossy(&output.stdout));
+                                                                                            }
+                                                                                        } else {
+                                                                                            eprintln!("AppleScript paste command failed with status: {:?}", output.status); // Use Debug format
+                                                                                            if !output.stderr.is_empty() {
+                                                                                                eprintln!("osascript stderr: {}", String::from_utf8_lossy(&output.stderr));
+                                                                                            }
+                                                                                        }
+                                                                                    }
+                                                                                    Err(e) => {
+                                                                                        eprintln!("Failed to execute osascript for paste using shell plugin: {}", e);
+                                                                                    }
+                                                                                }
+                                                                            }
+                                                                            #[cfg(not(target_os = "macos"))]
+                                                                            {
+                                                                                // On other platforms, we can't use AppleScript.
+                                                                                println!("Automatic paste via script not supported on this OS.");
+                                                                            }
+
+
+                                                                            // Wait a bit before restoring the clipboard
+                                                                            tokio::time::sleep(tokio::time::Duration::from_secs(1)).await; // Keep delay
+
+                                                                            // Restore original clipboard content
+                                                                            if let Err(e) = app_handle_post.clipboard().write_text(previous_clipboard) {
+                                                                                eprintln!("Failed to restore clipboard: {}", e);
+                                                                            } else {
+                                                                                println!("Original clipboard content restored after paste and delay");
+                                                                            }
+
+                                                                            // Play end sound for clipboard operation
+                                                                            play_sound_rodio(&app_handle_post, "record-end.mp3");
+                                                                        }
+                                                                    }
+                                                                    Err(e) => {
+                                                                        eprintln!("Clipboard transcription failed: {}", e);
+                                                                        if let Err(e_emit) = app_handle_post.emit("processing_error", &serde_json::json!({ "stage": "transcription", "message": e })) {
+                                                                            eprintln!("Failed to emit processing_error event: {}", e_emit);
+                                                                        }
+                                                                    }
+                                                                }
+                                                            } else {
+                                                                println!("Clipboard post-processing: Duration <= 1s. Playing end sound and resetting state.");
+                                                                // Play end sound only for short recordings
+                                                                play_sound_rodio(&app_handle_post, "record-end.mp3");
+                                                            }
+
+                                                            // Reset state to Idle
+                                                            {
+                                                                let mut state = app_state_post.lock().await;
+                                                                *state = RecorderState::Idle;
+                                                                emit_state_change(&app_handle_post, RecorderState::Idle);
+                                                            }
+                                                            println!("Clipboard post-processing task finished.");
+                                                        }); // End of post-processing tokio::spawn
+                                                    }
+                                                    RecorderState::Recording | RecorderState::Transcribing => {
+                                                        println!("Clipboard Shortcut Pressed: State is {:?} (Ignoring)", *current_app_state);
+                                                    }
+                                                }
+                                            }
+                                            // --- Shortcut Released ---
+                                            ShortcutState::Released => {
+                                                let current_state = *current_app_state; // Read state before releasing lock
+                                                drop(current_app_state); // Release lock
+
+                                                if let RecorderState::Recording = current_state {
+                                                    println!("Clipboard Shortcut Released: Recording -> Processing...");
+
+                                                    // 1. Immediately hide the window (sync)
+                                                    let _ = recorder_window.hide();
+
+                                                    // 2. Signal recording thread and post-processing task to stop (sync atomic)
+                                                    println!("Setting recording flag to false for clipboard.");
+                                                    recording_flag_clone.store(false, Ordering::SeqCst);
+
+                                                    // Post-processing task was already spawned on press and will detect the flag change.
+                                                } else {
+                                                    println!("Clipboard Shortcut Released: Not in Recording state (Ignoring)");
+                                                    if recorder_window.is_visible().unwrap_or(false) {
+                                                        let _ = recorder_window.hide();
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        eprintln!("Recorder window not found in clipboard shortcut handler.");
+                                    }
+                                }
                             }); // End of outer tokio::spawn for handler logic
                         }) // End of with_handler closure
                         .build(),
@@ -660,6 +943,11 @@ pub async fn run() {
                     eprintln!("Failed to register AI shortcut (Alt+`): {}", e);
                 } else {
                     println!("AI shortcut (Alt+`) registered successfully.");
+                }
+                if let Err(e) = shortcut_manager.register(clipboard_shortcut.clone()) {
+                    eprintln!("Failed to register clipboard shortcut (Ctrl+`): {}", e);
+                } else {
+                    println!("Clipboard shortcut (Ctrl+`) registered successfully.");
                 }
             }
             Ok(())

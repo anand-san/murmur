@@ -23,6 +23,17 @@
           "url": "http://**"
         }
       ]
+    },
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "run-osascript-paste",
+          "cmd": "osascript",
+          "args": ["-e", { "validator": ".*" }],
+          "sidecar": false
+        }
+      ]
     }
   ]
 }
