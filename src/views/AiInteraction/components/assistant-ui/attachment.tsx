@@ -1,7 +1,7 @@
 "use client";
 
 import { PropsWithChildren, useEffect, useState, type FC } from "react";
-import { CircleXIcon, FileIcon, PaperclipIcon } from "lucide-react";
+import { CircleXIcon, FileIcon, PaperclipIcon, Camera } from "lucide-react";
 import {
   AttachmentPrimitive,
   ComposerPrimitive,
@@ -15,6 +15,12 @@ import {
   TooltipTrigger,
 } from "../../../../components/ui/tooltip";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../../components/ui/dropdown-menu";
+import {
   Dialog,
   DialogTitle,
   DialogTrigger,
@@ -27,6 +33,7 @@ import {
   AvatarFallback,
 } from "../../../../components/ui/avatar";
 import { TooltipIconButton } from "./tooltip-icon-button";
+import { handleAnalyzeScreen } from "../../utils/screenshotUtils";
 import { DialogContent as DialogPrimitiveContent } from "@radix-ui/react-dialog";
 
 const useFileSrc = (file: File | undefined) => {
@@ -180,15 +187,29 @@ export const ComposerAttachments: FC = () => {
 
 export const ComposerAddAttachment: FC = () => {
   return (
-    <ComposerPrimitive.AddAttachment asChild>
-      <TooltipIconButton
-        className="my-2.5 size-8 p-2 transition-opacity ease-in"
-        tooltip="Add Attachment"
-        variant="ghost"
-      >
-        <PaperclipIcon />
-      </TooltipIconButton>
-    </ComposerPrimitive.AddAttachment>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <TooltipIconButton
+          className="my-2.5 size-8 p-2 transition-opacity ease-in cursor-pointer"
+          tooltip="Add File"
+          variant="ghost"
+        >
+          <PaperclipIcon />
+        </TooltipIconButton>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <DropdownMenuItem onSelect={() => handleAnalyzeScreen()} disabled>
+          <Camera className="mr-2 h-4 w-4" />
+          Screenshot
+        </DropdownMenuItem>
+        <ComposerPrimitive.AddAttachment asChild className="cursor-pointer">
+          <DropdownMenuItem>
+            <FileIcon className="mr-2 h-4 w-4" />
+            Add File
+          </DropdownMenuItem>
+        </ComposerPrimitive.AddAttachment>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 
