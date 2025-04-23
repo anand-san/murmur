@@ -4,6 +4,7 @@ import {
   ComposerPrimitive,
   MessagePrimitive,
   ThreadPrimitive,
+  useMessage, // Import useMessage hook
 } from "@assistant-ui/react";
 import { FC } from "react"; // Removed 'type' as it's used as a value below
 import {
@@ -15,6 +16,8 @@ import {
   PencilIcon,
   RefreshCwIcon,
   SendHorizontalIcon, // Icon for the trigger button
+  AudioLinesIcon,
+  Volume2Icon, // Icon for read aloud
 } from "lucide-react";
 import { cn } from "../../../../lib/utils";
 import { Button } from "../../../../components/ui/button";
@@ -30,11 +33,22 @@ import {
   UserMessageAttachments,
 } from "./attachment";
 
+// Define the type for the new prop function
+type PlayAudioForTextFn = (text: string) => Promise<void>;
+
 interface ThreadProps {
-  recorderState?: RecorderState; // Add the prop
+  recorderState?: RecorderState;
+  isPlayingAudio?: boolean;
+  stopAudioPlayback?: () => void;
+  playAudioForText?: PlayAudioForTextFn; // Add the new prop
 }
 
-export const Thread: FC<ThreadProps> = ({ recorderState = "idle" }) => {
+export const Thread: FC<ThreadProps> = ({
+  recorderState = "idle",
+  isPlayingAudio = false,
+  stopAudioPlayback = () => {},
+  playAudioForText = async () => {}, // Default async no-op
+}) => {
   return (
     // Wrap the trigger and define the Sheet content
     <ThreadPrimitive.Root
@@ -46,11 +60,17 @@ export const Thread: FC<ThreadProps> = ({ recorderState = "idle" }) => {
       <ThreadPrimitive.Viewport className="flex h-full w-full flex-col items-center overflow-y-scroll scroll-smooth bg-inherit">
         <ThreadWelcome />
 
+        {/* Pass playAudioForText down via render prop */}
         <ThreadPrimitive.Messages
           components={{
             UserMessage: UserMessage,
             EditComposer: EditComposer,
-            AssistantMessage: AssistantMessage,
+            AssistantMessage: (props) => (
+              <AssistantMessage
+                {...props}
+                playAudioForText={playAudioForText}
+              />
+            ),
           }}
         />
 
@@ -61,15 +81,24 @@ export const Thread: FC<ThreadProps> = ({ recorderState = "idle" }) => {
         <div className="sticky bottom-0 flex w-full max-w-[var(--thread-max-width)] flex-col items-center justify-end rounded-t-lg bg-inherit pb-2">
           <ThreadScrollToBottom />
 
-          {/* Model Selector Trigger and Composer Area */}
+          {/* Model Selector, Stop Button, and Composer Area */}
           <div className="flex flex-col items-center w-full max-w-[var(--thread-max-width)] gap-2">
+            {/* Recording/Transcribing Indicators */}
             {recorderState === "recording" && <RecordingIndicator />}
             {recorderState === "transcribing" && <TranscribingIndicator />}
+
+            {/* Idle State: Show Model Selector, Stop Button (if playing), and Composer */}
             {recorderState === "idle" && (
-              <>
-                <ModelSelectorSheet />
-                <Composer />
-              </>
+              <div className="flex items-end w-full gap-2">
+                {/* Model Selector and Composer take remaining space */}
+                <div className="flex-grow flex flex-col items-center gap-2">
+                  <ModelSelectorSheet />
+                  <Composer
+                    isPlayingAudio={isPlayingAudio}
+                    stopAudioPlayback={stopAudioPlayback}
+                  />
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -132,7 +161,15 @@ const ThreadWelcome: FC = () => {
 //   );
 // };
 
-const Composer: FC = () => {
+interface ComposerProps {
+  isPlayingAudio?: boolean;
+  stopAudioPlayback?: () => void;
+}
+
+const Composer: FC<ComposerProps> = ({
+  isPlayingAudio = false,
+  stopAudioPlayback = () => {},
+}) => {
   return (
     <ComposerPrimitive.Root className="focus-within:border-ring/20 flex w-full flex-wrap items-end rounded-lg border bg-background/80 px-2.5 shadow-sm transition-colors ease-in">
       <ComposerAttachments />
@@ -143,6 +180,17 @@ const Composer: FC = () => {
         placeholder="Write a message..."
         className="placeholder:text-muted-foreground max-h-40 flex-grow resize-none border-none px-2 py-4 text-sm outline-none focus:ring-0 disabled:cursor-not-allowed"
       />
+      {/* Stop Playback Button (Conditional) */}
+      {isPlayingAudio && (
+        <TooltipIconButton
+          tooltip="Stop Playback"
+          className="mb-2.5 size-8 p-2 transition-opacity ease-in cursor-pointer"
+          onClick={stopAudioPlayback}
+          variant={"ghost"}
+        >
+          <Volume2Icon className="text-blue-800" />
+        </TooltipIconButton>
+      )}
       <ComposerAction />
     </ComposerPrimitive.Root>
   );
@@ -225,12 +273,20 @@ const EditComposer: FC = () => {
   );
 };
 
-const AssistantMessage: FC = () => {
+// Define props for AssistantMessage, including the new function
+interface AssistantMessageProps {
+  playAudioForText?: PlayAudioForTextFn;
+}
+
+const AssistantMessage: FC<AssistantMessageProps> = ({
+  playAudioForText = async () => {}, // Default async no-op
+}) => {
   return (
     <MessagePrimitive.Root className="grid grid-cols-[auto_auto_1fr] grid-rows-[auto_1fr] relative w-full max-w-[var(--thread-max-width)] py-4">
       <div className="bg-muted/90 text-foreground max-w-[calc(var(--thread-max-width)*0.8)] break-words rounded-3xl px-5 py-2.5 pb-4 col-start-2 row-start-2 relative">
         <MessagePrimitive.Content components={{ Text: MarkdownText }} />
-        <AssistantActionBar />
+        {/* Pass the function down to the action bar */}
+        <AssistantActionBar playAudioForText={playAudioForText} />
       </div>
 
       <BranchPicker className="col-start-2 row-start-2 -ml-2 mr-2" />
@@ -238,16 +294,45 @@ const AssistantMessage: FC = () => {
   );
 };
 
-const AssistantActionBar: FC = () => {
+// Define props for AssistantActionBar
+interface AssistantActionBarProps {
+  playAudioForText?: PlayAudioForTextFn;
+}
+
+const AssistantActionBar: FC<AssistantActionBarProps> = ({
+  playAudioForText = async () => {}, // Default async no-op
+}) => {
+  const message = useMessage(); // Get the current message data
+
+  // Helper to extract text content from the message
+  const getMessageText = () => {
+    return message.content
+      .filter((c) => c.type === "text")
+      .map((c) => (c as any).text) // Assuming text content is directly in 'text' property
+      .join("\n");
+  };
+
+  const handleReadAloudClick = () => {
+    const text = getMessageText();
+    if (text && playAudioForText) {
+      console.log("Read Aloud clicked for message:", message.id);
+      playAudioForText(text); // Call the passed function
+    } else {
+      console.warn(
+        "Read Aloud clicked, but no text content found or function missing."
+      );
+    }
+  };
+
   return (
     <ActionBarPrimitive.Root
       hideWhenRunning
       autohide="always"
       autohideFloat="single-branch"
-      className="text-muted-foreground flex gap-1 absolute bottom-0 right-3 translate-y-1/2 bg-muted/70 rounded-full py-1 px-2"
+      className="text-muted-foreground flex gap-1 absolute -bottom-5 left-0 translate-y-1/2 bg-muted/70 rounded-full py-1 px-2 shadow-sm transition-colors ease-in"
     >
       <ActionBarPrimitive.Copy asChild>
-        <TooltipIconButton tooltip="Copy">
+        <TooltipIconButton tooltip="Copy" className="cursor-pointer">
           <MessagePrimitive.If copied>
             <CheckIcon />
           </MessagePrimitive.If>
@@ -257,10 +342,18 @@ const AssistantActionBar: FC = () => {
         </TooltipIconButton>
       </ActionBarPrimitive.Copy>
       <ActionBarPrimitive.Reload asChild>
-        <TooltipIconButton tooltip="Refresh">
+        <TooltipIconButton tooltip="Re-answer" className="cursor-pointer">
           <RefreshCwIcon />
         </TooltipIconButton>
       </ActionBarPrimitive.Reload>
+      {/* Add Read Aloud Button */}
+      <TooltipIconButton
+        tooltip="Read Aloud"
+        onClick={handleReadAloudClick}
+        className="cursor-pointer"
+      >
+        <AudioLinesIcon />
+      </TooltipIconButton>
     </ActionBarPrimitive.Root>
   );
 };

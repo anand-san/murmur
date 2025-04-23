@@ -46,6 +46,52 @@ export const transcribeAudio = async (audioFile: File): Promise<string> => {
   }
 };
 
+// Schema for Text-to-Speech request
+export const TextToSpeechSchema = z.object({
+  text: z.string(),
+  voice: z.string().optional(), // Optional voice selection
+});
+
+/**
+ * Generates speech audio from text using Groq TTS API via OpenAI SDK compatibility
+ */
+export const generateSpeech = async (
+  text: string,
+  voice: string = "Cheyenne-PlayAI" // Default voice
+): Promise<ArrayBuffer> => {
+  try {
+    if (!GROQ_API_KEY) {
+      throw new Error("GROQ_API_KEY is not configured");
+    }
+
+    console.log(
+      `Generating speech for text: "${text.substring(
+        0,
+        50
+      )}..." with voice: ${voice}`
+    );
+
+    const response = await groqClient.audio.speech.create({
+      model: "playai-tts", // Use the appropriate Groq TTS model
+      input: text,
+      voice: voice,
+      response_format: "wav", // Request WAV format
+    });
+
+    // Get the audio data as an ArrayBuffer
+    const audioBuffer = await response.arrayBuffer();
+    console.log(`Generated audio buffer size: ${audioBuffer.byteLength} bytes`);
+    return audioBuffer;
+  } catch (error) {
+    console.error("Speech generation error:", error);
+    throw new Error(
+      `Speech generation failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+};
+
 /**
  * Generates chat completion from text
  */

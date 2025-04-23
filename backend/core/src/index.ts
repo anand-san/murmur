@@ -10,6 +10,8 @@ import {
   ChatCompletionSchema,
   processImageToText,
   ImageToTextSchema,
+  generateSpeech, // Added for TTS
+  TextToSpeechSchema, // Added for TTS validation
 } from "./service";
 import { zValidator } from "@hono/zod-validator";
 import { cors } from "hono/cors";
@@ -132,6 +134,31 @@ app.post("/api/vision", zValidator("json", ImageToTextSchema), async (c) => {
     return c.json(
       {
         error: "Failed to process image",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      500
+    );
+  }
+});
+
+// Text-to-Speech endpoint
+app.post("/api/tts", zValidator("json", TextToSpeechSchema), async (c) => {
+  try {
+    const { text, voice } = c.req.valid("json");
+    console.log(`Received TTS request for text: "${text.substring(0, 50)}..."`);
+    const audioBuffer = await generateSpeech(text, voice); // Pass optional voice
+
+    // Set headers for audio response
+    c.header("Content-Type", "audio/wav");
+    c.header("Content-Length", audioBuffer.byteLength.toString());
+
+    // Return the audio data directly
+    return c.body(audioBuffer);
+  } catch (error) {
+    console.error("TTS error:", error);
+    return c.json(
+      {
+        error: "Failed to generate speech",
         details: error instanceof Error ? error.message : String(error),
       },
       500

@@ -1,7 +1,7 @@
-import { useThreadRuntime } from "@assistant-ui/react";
+import { useThreadRuntime } from "@assistant-ui/react"; // Import AssistantRuntime type
 import { Thread } from "./components/assistant-ui/thread";
 import { ThreadList } from "./components/assistant-ui/thread-list";
-import { MutableRefObject, useEffect, useState } from "react";
+import { MutableRefObject, useEffect, useState, useRef } from "react"; // Import useRef
 import {
   Sidebar,
   SidebarContent,
@@ -15,6 +15,8 @@ import {
   SendMessageFn,
   SetTranscriptionStatusFn,
 } from "./hooks/useAiInteraction";
+// Removed TTS API import, now handled by the hook
+import { useTextToSpeech } from "./hooks/useTextToSpeech"; // Import the new hook
 
 interface AssistantProps {
   sendMessageRef: MutableRefObject<SendMessageFn | null>;
@@ -25,9 +27,14 @@ export const Assistant = ({
   sendMessageRef,
   setTranscriptionStatusRef,
 }: AssistantProps) => {
-  const { append } = useThreadRuntime();
+  const { append } = useThreadRuntime(); // Only need append here now
+  // Get all returned values from the hook
+  const { isPlayingAudio, stopAudioPlayback, playAudioForText } =
+    useTextToSpeech();
 
   const [recorderState, setRecorderState] = useState<RecorderState>("idle");
+
+  // TTS logic is now handled by useTextToSpeech hook
 
   useEffect(() => {
     if (sendMessageRef) {
@@ -84,7 +91,13 @@ export const Assistant = ({
           </SidebarTrigger>
         </div>
         <div className="flex-1 w-full h-full px-4 pt-4">
-          <Thread recorderState={recorderState} />
+          {/* Pass down audio state and control function */}
+          <Thread
+            recorderState={recorderState}
+            isPlayingAudio={isPlayingAudio}
+            stopAudioPlayback={stopAudioPlayback}
+            playAudioForText={playAudioForText} // Pass down the new function
+          />
         </div>
       </div>
     </SidebarProvider>
