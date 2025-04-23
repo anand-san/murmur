@@ -23,7 +23,7 @@ use std::time::Duration;
 use tauri::menu::{MenuBuilder, MenuItem}; // Import MenuBuilder, remove MenuSeparator
 use tauri::tray::TrayIconBuilder; // Added for Tray Icon
 use tauri::Manager;
-use tauri::{path::BaseDirectory, Emitter, State}; // Added BaseDirectory
+use tauri::{path::BaseDirectory, Emitter}; // Added BaseDirectory
 use tauri_plugin_positioner::{Position, WindowExt}; // Added BufReader import
 
 // --- Helper Functions ---
@@ -378,7 +378,7 @@ pub async fn run() {
                                                         drop(current_app_state); // Release lock before sync operations
 
                                                         // --- Check if main window is visible ---
-                                                        let main_window_visible = match app_handle_clone.get_webview_window("main") {
+                                                        let _main_window_visible = match app_handle_clone.get_webview_window("main") {
                                                             Some(main_window) => main_window.is_visible().unwrap_or(false), // Assume not visible on error
                                                             None => {
                                                                 eprintln!("Main window not found during shortcut press check.");
