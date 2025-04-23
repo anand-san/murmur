@@ -127,6 +127,39 @@ const ThreadWelcome: FC = () => {
       <div className="flex w-full max-w-[var(--thread-max-width)] flex-grow flex-col">
         <div className="flex w-full flex-grow flex-col items-center justify-center">
           <p className="mt-4 font-medium">How can I help you today?</p>
+          <hr />
+          <div className="flex flex-col gap-4 mt-4 bg-white/20 p-4 rounded-lg font-light text-xs tracking-tight">
+            <span>
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                ⌘
+              </kbd>{" "}
+              +{" "}
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                `
+              </kbd>{" "}
+              Record audio & process chat
+            </span>
+            <span>
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                ⌥
+              </kbd>{" "}
+              +{" "}
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                `
+              </kbd>{" "}
+              Show chat window
+            </span>
+            <span>
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                ⌃
+              </kbd>{" "}
+              +{" "}
+              <kbd className="px-2 py-1.5 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                `
+              </kbd>{" "}
+              Record audio & paste transcription
+            </span>
+          </div>
         </div>
         {/* <ThreadWelcomeSuggestions /> */}
       </div>

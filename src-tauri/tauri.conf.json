@@ -16,9 +16,15 @@
         "label": "main",
         "title": "Vaiced",
         "url": "/ai-interaction",
-        "width": 350,
-        "height": 450,
+        "width": 450,
+        "height": 550,
         "decorations": true,
+        "browserExtensionsEnabled": false,
+        "trafficLightPosition": {
+          "x": 10,
+          "y": 10
+        },
+        "visibleOnAllWorkspaces": true,
         "visible": true,
         "resizable": true,
         "fullscreen": false,
