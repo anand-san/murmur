@@ -26,7 +26,6 @@ import { TooltipIconButton } from "./tooltip-icon-button";
 import { RecorderState } from "../../hooks/useAiInteraction";
 import RecordingIndicator from "../../../../components/RecordingIndicator";
 import TranscribingIndicator from "../../../../components/TranscribingIndicator";
-import ModelSelectorSheet from "../ModelSelectorSheet";
 import {
   ComposerAddAttachment,
   ComposerAttachments,
@@ -87,12 +86,10 @@ export const Thread: FC<ThreadProps> = ({
             {recorderState === "recording" && <RecordingIndicator />}
             {recorderState === "transcribing" && <TranscribingIndicator />}
 
-            {/* Idle State: Show Model Selector, Stop Button (if playing), and Composer */}
+            {/* Idle State: Show Composer */}
             {recorderState === "idle" && (
               <div className="flex items-end w-full gap-2">
-                {/* Model Selector and Composer take remaining space */}
-                <div className="flex-grow flex flex-col items-center gap-2">
-                  <ModelSelectorSheet />
+                <div className="flex-grow flex flex-col items-center">
                   <Composer
                     isPlayingAudio={isPlayingAudio}
                     stopAudioPlayback={stopAudioPlayback}

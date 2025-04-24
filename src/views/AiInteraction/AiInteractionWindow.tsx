@@ -1,9 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-import {
-  ModelSelectionProvider,
-  useModelSelection,
-} from "./context/ModelSelectionContext"; // Keep the provider
+import { useModelSelection } from "./context/ModelSelectionContext"; // Keep the provider
 import { Assistant } from "./assistant";
 import useAiInteraction from "./hooks/useAiInteraction";
 import {
@@ -72,10 +69,6 @@ const AiInteractionWindow: React.FC = () => {
 };
 
 const AiInteractionWindowWithContext: React.FC = () => {
-  return (
-    <ModelSelectionProvider>
-      <AiInteractionWindow />
-    </ModelSelectionProvider>
-  );
+  return <AiInteractionWindow />;
 };
 export default AiInteractionWindowWithContext;
