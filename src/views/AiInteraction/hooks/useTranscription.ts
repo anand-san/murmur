@@ -1,5 +1,5 @@
+import { transcribeAudio } from "../../../api/speech/speech";
 import { useMutation } from "@tanstack/react-query";
-import { transcribeAudio } from "../api/transcription";
 
 /**
  * React Query hook for transcribing audio

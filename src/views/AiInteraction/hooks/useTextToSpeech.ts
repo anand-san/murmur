@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useThreadRuntime } from "@assistant-ui/react";
-import { fetchTTSAudio } from "../api/tts";
+import { generateSpeech } from "../../../api/speech/speech";
 
 // Define a type for text content parts
 type TextContentPart = { type: "text"; text: string };
@@ -41,7 +41,7 @@ export const useTextToSpeech = () => {
     );
 
     try {
-      const arrayBuffer = await fetchTTSAudio(text);
+      const arrayBuffer = await generateSpeech(text);
 
       if (
         !audioContextRef.current ||

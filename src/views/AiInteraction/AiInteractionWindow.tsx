@@ -16,7 +16,7 @@ const AiInteractionWindow: React.FC = () => {
   const { sendMessageRef, setTranscriptionStatusRef, errorMessage } =
     useAiInteraction();
   const { selectedModelId } = useModelSelection();
-  const CHAT_API_URL = `${API_BASE}/chat`;
+  const CHAT_API_URL = `${API_BASE}/api/chat`;
   const [showError, setShowError] = useState(false);
 
   // Show error message when errorMessage changes

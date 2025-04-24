@@ -42,11 +42,6 @@ export default function useAiInteraction() {
           const isClipboardMode = event.payload.isClipboardMode || false;
 
           try {
-            console.log("Received audio data from backend");
-            console.log(
-              `Processing in ${isClipboardMode ? "clipboard" : "normal"} mode`
-            );
-
             // Update the current mode
             setCurrentMode(isClipboardMode ? "clipboard" : "normal");
 
@@ -69,32 +64,30 @@ export default function useAiInteraction() {
               const transcriptionText = await transcriptionMutation.mutateAsync(
                 wavFile
               );
-              console.log("Transcription successful:", transcriptionText);
-
-              // Process based on mode
-              if (isClipboardMode) {
-                // Clipboard mode - call backend to handle paste operation
-                try {
-                  console.log("Executing clipboard paste operation");
-                  await clipboardPasteMutation.mutateAsync(transcriptionText);
-                  console.log("Clipboard paste operation completed");
-                } catch (error) {
-                  console.error("Failed clipboard paste operation:", error);
-                  setErrorMessage(
-                    `Clipboard operation failed: ${
-                      error instanceof Error ? error.message : String(error)
-                    }`
-                  );
-                }
+              if (!("text" in transcriptionText)) {
               } else {
-                // Normal mode - Send the transcription to AI
-                if (sendMessageRef.current && transcriptionText) {
-                  appWindow.setFocus();
-                  sendMessageRef.current(transcriptionText);
+                if (isClipboardMode) {
+                  // Clipboard mode - call backend to handle paste operation
+                  try {
+                    await clipboardPasteMutation.mutateAsync(
+                      transcriptionText.text
+                    );
+                  } catch (error) {
+                    setErrorMessage(
+                      `Clipboard operation failed: ${
+                        error instanceof Error ? error.message : String(error)
+                      }`
+                    );
+                  }
+                } else {
+                  if (sendMessageRef.current && transcriptionText) {
+                    appWindow.setFocus();
+                    sendMessageRef.current(transcriptionText.text);
+                  }
                 }
               }
+              // Process based on mode
             } catch (error) {
-              console.error("Failed to transcribe audio:", error);
               setErrorMessage(
                 `Transcription failed: ${
                   error instanceof Error ? error.message : String(error)
