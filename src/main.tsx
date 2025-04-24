@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom/client";
-import WindowManager from "./WindowManager";
+import App from "./App";
 import "./styles/globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary"; // Import ErrorBoundary
@@ -13,27 +13,26 @@ const RootComponent = () => {
   const queryClient = new QueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <SidebarProvider defaultOpen={false}>
-        <ModelSelectionProvider>
-          <SidebarContentData />
-          <div className="absolute mt-5 ml-2 left-0 md:left-12 top-0 flex items-center z-40">
-            <SidebarTrigger className="mr-2 text-white hover:text-white bg-stone-500 hover:bg-stone-600 rounded-full p-2 cursor-pointer" />
-          </div>
-          <div className="flex">
-            <WindowManager />
-          </div>
-          <Toaster />
-        </ModelSelectionProvider>
-      </SidebarProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <QueryClientProvider client={queryClient}>
+          <SidebarProvider defaultOpen={false}>
+            <ModelSelectionProvider>
+              <SidebarContentData />
+              <div className="absolute mt-5 ml-2 left-0 md:left-12 top-0 flex items-center z-40">
+                <SidebarTrigger className="mr-2 text-white hover:text-white bg-stone-500 hover:bg-stone-600 rounded-full p-2 cursor-pointer" />
+              </div>
+              <div className="flex">
+                <App />
+              </div>
+              <Toaster />
+            </ModelSelectionProvider>
+          </SidebarProvider>
+        </QueryClientProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  // Wrap RootComponent with ErrorBoundary
-  <ErrorBoundary>
-    <BrowserRouter>
-      <RootComponent />
-    </BrowserRouter>
-  </ErrorBoundary>
+  <RootComponent />
 );
