@@ -4,6 +4,7 @@ import { logger } from "hono/logger";
 import { chatRouter } from "./src/routes/chatRouter";
 import { speechRouter } from "./src/routes/speechRouter";
 import { imageRouter } from "./src/routes/imageRouter";
+import { configRouter } from "./src/routes/configRouter/configRouter";
 
 const app = new Hono();
 
@@ -28,7 +29,8 @@ const apiRoutes = app
   .get("/health", (c) => c.json({ status: "ok" }))
   .route("/chat", chatRouter)
   .route("/speech", speechRouter)
-  .route("/image", imageRouter);
+  .route("/image", imageRouter)
+  .route("/config", configRouter);
 
 export default app;
 export type ApiRoutes = typeof apiRoutes;

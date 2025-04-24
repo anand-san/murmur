@@ -1,17 +1,19 @@
 import { CoreMessage, StreamTextResult, generateText, streamText } from "ai";
 import { DEFAULT_SYSTEM_PROMPT } from "../../config";
-import { registry } from "../../registry";
+import { createDynamicProviderRegistry } from "../../registry";
 
 export const generateChatCompletion = async (
   messages: CoreMessage[],
   modelId?: string
 ): Promise<string> => {
   try {
+    const registry = await createDynamicProviderRegistry();
     const defaultModelId = "groq:llama-3.3-70b-versatile";
     const selectedModelId = modelId || defaultModelId;
 
     const result = generateText({
       model: registry.languageModel(selectedModelId as any),
+
       messages: messages,
       temperature: 0.5,
       maxTokens: 4000,
@@ -33,6 +35,7 @@ export const streamChatCompletion = async (
   modelId?: string
 ): Promise<StreamTextResult<any, any>> => {
   try {
+    const registry = await createDynamicProviderRegistry();
     const defaultModelId = "groq:llama-3.3-70b-versatile";
     const selectedModelId = modelId || defaultModelId;
 
