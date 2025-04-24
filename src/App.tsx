@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import AiInteractionWindow from "./views/AiInteraction/AiInteractionWindow";
 import { ConfigManagerWindow } from "./views/ConfigManager/ConfigManagerWindow";
+import ProviderForm from "./views/ConfigManager/components/ProviderForm";
 
 export default function App() {
   return (
@@ -13,6 +14,14 @@ export default function App() {
         <Routes>
           <Route index path="/" element={<AiInteractionWindow />} />
           <Route path="/settings" element={<ConfigManagerWindow />} />
+          <Route
+            path="/settings/provider/new/:type"
+            element={<ProviderForm />}
+          />
+          <Route
+            path="/settings/provider/edit/:id"
+            element={<ProviderForm />}
+          />
           <Route path="*" element={<Navigate to={"/"} />} />
         </Routes>
       </div>

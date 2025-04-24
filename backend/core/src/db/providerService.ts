@@ -9,6 +9,7 @@ export type ProviderModel = { label: string; value: string };
 export interface Provider {
   id: string;
   providerName: string;
+  nickName: string;
   apiKey: string;
   baseUrl?: string;
   availableModels?: ProviderModelsType;
@@ -18,6 +19,7 @@ export interface Provider {
 
 export interface CreateProviderInput {
   providerName: string;
+  nickName: string;
   apiKey: string;
   baseUrl?: string;
   availableModels?: ProviderModelsType;
@@ -30,6 +32,7 @@ export interface UpdateProviderInput {
   baseUrl?: string;
   availableModels?: ProviderModelsType;
   default?: boolean;
+  nickName?: string;
 }
 
 export class ProviderService {
@@ -40,6 +43,7 @@ export class ProviderService {
     await db.insert(providers).values({
       id,
       providerName: input.providerName,
+      nickName: input.nickName,
       apiKey: input.apiKey,
       baseUrl: input.baseUrl || null,
       availableModels: input.availableModels
@@ -54,6 +58,7 @@ export class ProviderService {
     return {
       id,
       providerName: input.providerName,
+      nickName: input.nickName,
       apiKey: input.apiKey,
       baseUrl: input.baseUrl,
       availableModels: input.availableModels,
@@ -68,6 +73,7 @@ export class ProviderService {
     return results.map((row) => ({
       id: row.id,
       providerName: row.providerName,
+      nickName: row.nickName,
       apiKey: row.apiKey,
       baseUrl: row.baseUrl || undefined,
       availableModels: row.availableModels
@@ -93,6 +99,7 @@ export class ProviderService {
     return {
       id: row.id,
       providerName: row.providerName,
+      nickName: row.nickName,
       apiKey: row.apiKey,
       baseUrl: row.baseUrl || undefined,
       availableModels: row.availableModels
@@ -118,6 +125,7 @@ export class ProviderService {
     return {
       id: row.id,
       providerName: row.providerName,
+      nickName: row.nickName,
       apiKey: row.apiKey,
       baseUrl: row.baseUrl || undefined,
       availableModels: row.availableModels
@@ -128,11 +136,11 @@ export class ProviderService {
     };
   }
 
-  async getByType(type: "chat" | "speech" | "image"): Promise<Provider[]> {
+  async getByType(modeltype: "chat" | "speech" | "image"): Promise<Provider[]> {
     const result = await db
       .select()
       .from(providers)
-      .where(eq(providers.modelType, type));
+      .where(eq(providers.modelType, modeltype));
 
     if (result.length === 0) {
       return [];
@@ -141,6 +149,7 @@ export class ProviderService {
     return result.map((row) => ({
       id: row.id,
       providerName: row.providerName,
+      nickName: row.nickName,
       apiKey: row.apiKey,
       baseUrl: row.baseUrl || undefined,
       availableModels: row.availableModels

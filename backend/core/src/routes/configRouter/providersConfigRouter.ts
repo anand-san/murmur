@@ -14,6 +14,7 @@ const CreateProviderSchema = z.object({
   apiKey: z.string(),
   baseUrl: z.string().optional(),
   availableModels: z.array(ProviderModelSchema).optional(),
+  nickName: z.string(),
   modelType: z.enum(["chat", "speech", "image"]),
   default: z.boolean().optional(),
 });
@@ -22,6 +23,7 @@ const UpdateProviderSchema = z.object({
   apiKey: z.string().optional(),
   baseUrl: z.string().optional(),
   availableModels: z.array(ProviderModelSchema).optional(),
+  nickName: z.string().optional(),
   default: z.boolean().optional(),
 });
 

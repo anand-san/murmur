@@ -1,9 +1,19 @@
 import { queryOptions } from "@tanstack/react-query";
 import { api } from "../client";
 import {
+  type Provider,
+  type ProviderModel,
   type CreateProviderInput,
   type UpdateProviderInput,
 } from "../../../backend/core/src/db/providerService";
+
+// Re-export types for easier access
+export type {
+  Provider,
+  ProviderModel,
+  CreateProviderInput,
+  UpdateProviderInput,
+};
 
 export async function getAllProviders() {
   const res = await api.api.config.providers.$get();
