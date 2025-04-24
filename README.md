@@ -1,6 +1,6 @@
-# Vaiced - Voice-Activated AI Assistant
+# Murmur - Voice-Activated AI Assistant
 
-Vaiced is a desktop application that enables seamless voice-to-AI interaction through a minimalist, non-intrusive interface. The application allows users to quickly record voice snippets using global keyboard shortcuts, automatically transcribes the audio, and presents the transcription to an AI assistant for immediate response—all within a streamlined workflow.
+Murmur is a desktop application that enables seamless voice-to-AI interaction through a minimalist, non-intrusive interface. The application allows users to quickly record voice snippets using global keyboard shortcuts, automatically transcribes the audio, and presents the transcription to an AI assistant for immediate response—all within a streamlined workflow.
 
 ## Features
 

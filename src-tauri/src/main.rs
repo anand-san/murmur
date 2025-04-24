@@ -4,5 +4,5 @@
 fn main() {
     // Environment variables are now loaded during build time via build.rs
     // and accessed using env!("VAR_NAME")
-    vaiced_tauri_lib::run()
+    murmur_lib::run()
 }

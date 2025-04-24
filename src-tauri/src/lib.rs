@@ -271,7 +271,7 @@ pub async fn run() {
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().cloned().ok_or("Failed to get default window icon")?)
-                .tooltip("Vaiced")
+                .tooltip("Murmur")
                 .menu(&tray_menu)
                 .on_menu_event(move |app, event| {
                     match event.id.as_ref() {

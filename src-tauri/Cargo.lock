@@ -2502,6 +2502,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "murmur"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.7",
+ "bytes",
+ "cpal",
+ "crossbeam-channel",
+ "dotenvy",
+ "image 0.25.6",
+ "lazy_static",
+ "mime",
+ "rodio",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-clipboard-manager",
+ "tauri-plugin-global-shortcut",
+ "tauri-plugin-http",
+ "tauri-plugin-positioner",
+ "tauri-plugin-shell",
+ "thiserror 1.0.69",
+ "tokio",
+ "xcap",
+]
+
+[[package]]
 name = "ndk"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5355,33 +5382,6 @@ dependencies = [
  "aligned-vec",
  "num-traits",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "vaiced"
-version = "0.1.0"
-dependencies = [
- "base64 0.21.7",
- "bytes",
- "cpal",
- "crossbeam-channel",
- "dotenvy",
- "image 0.25.6",
- "lazy_static",
- "mime",
- "rodio",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tauri-plugin-clipboard-manager",
- "tauri-plugin-global-shortcut",
- "tauri-plugin-http",
- "tauri-plugin-positioner",
- "tauri-plugin-shell",
- "thiserror 1.0.69",
- "tokio",
- "xcap",
 ]
 
 [[package]]
