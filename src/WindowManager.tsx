@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow as tauriWindow } from "@tauri-apps/api/window";
-import AiInteractionWindow from "./views/AiInteraction/AiInteractionWindow"; // Import the new component
+import AiInteractionWindow from "./views/AiInteraction/AiInteractionWindow";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { ConfigManagerWindow } from "./views/ConfigManager/ConfigManagerWindow";
 
 const WindowManager = () => {
   const [windowLabel, setWindowLabel] = useState<string | null>(null);
@@ -26,7 +28,7 @@ const WindowManager = () => {
 
   // Render the appropriate component based on the window label
   switch (windowLabel) {
-    case "main": // Now renders the AI Interaction Window
+    case "main":
       return (
         <>
           <div className="h-screen w-screen grow bg-background/50">
@@ -34,7 +36,10 @@ const WindowManager = () => {
               className="absolute top-0 h-7 w-full z-50"
               data-tauri-drag-region
             />
-            <AiInteractionWindow />
+            <Routes>
+              <Route path="/" element={<AiInteractionWindow />} />
+              <Route path="/settings" element={<ConfigManagerWindow />} />
+            </Routes>
           </div>
         </>
       );

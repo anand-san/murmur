@@ -18,7 +18,10 @@ import {
   Bot,
   ChevronDown,
   PanelLeftCloseIcon,
+  MessageSquare,
 } from "lucide-react";
+
+import { useNavigate, useLocation } from "react-router-dom";
 
 import {
   DropdownMenu,
@@ -43,8 +46,23 @@ export default function SidebarContentData() {
     getModelNameById,
   } = useModelSelection();
 
-  // Use sidebar context to toggle sidebar state
-  const { toggleSidebar } = useSidebar();
+  // Use sidebar context to control the sidebar state
+  const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
+
+  // Function to close the sidebar
+  const closeSidebar = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    } else {
+      setOpen(false);
+    }
+  };
+
+  // Use navigate for routing
+  const navigate = useNavigate();
+
+  // Get current location to determine active route
+  const location = useLocation();
 
   // Get the currently selected model name
   const currentModelName = getModelNameById(selectedModelId) || "Select Model";
@@ -81,13 +99,39 @@ export default function SidebarContentData() {
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
-                <SidebarMenuButton>
-                  <Plus />
-                  <span>New Chat</span>
+                <SidebarMenuButton isActive={location.pathname === "/"} asChild>
+                  <div>
+                    <Button
+                      variant={"link"}
+                      className="cursor-pointer flex items-center justify-start ml-0 pl-0 gap-2 w-full hover:no-underline"
+                      onClick={() => {
+                        navigate("/");
+                        closeSidebar();
+                      }}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                      <span>Chat</span>
+                    </Button>
+                    <Button
+                      variant="link"
+                      size="icon"
+                      className="ml-auto h-8 w-8 cursor-pointer"
+                      title="New Chat"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
-                <SidebarMenuButton>
+                <SidebarMenuButton
+                  isActive={location.pathname === "/settings"}
+                  onClick={() => {
+                    navigate("/settings");
+                    closeSidebar();
+                  }}
+                  className="cursor-pointer"
+                >
                   <Settings />
                   <span>Settings</span>
                 </SidebarMenuButton>
@@ -142,7 +186,11 @@ export default function SidebarContentData() {
                       onValueChange={setSelectedModelId}
                     >
                       {provider.models.map((model) => (
-                        <DropdownMenuRadioItem key={model.id} value={model.id}>
+                        <DropdownMenuRadioItem
+                          key={model.id}
+                          value={model.id}
+                          className="cursor-pointer"
+                        >
                           <span className="ml-1">{model.name}</span>
                         </DropdownMenuRadioItem>
                       ))}
