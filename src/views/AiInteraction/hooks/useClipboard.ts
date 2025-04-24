@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { performClipboardPaste } from "../api/clipboard";
+import { performClipboardPaste } from "../../../api/tauri/clipboard";
 
 /**
  * React Query hook for clipboard paste operations
