@@ -47,7 +47,7 @@ const AiInteractionWindow: React.FC = () => {
     },
   });
   return (
-    <div className="flex flex-col h-full text-foreground relative">
+    <div className="flex flex-col h-full text-foreground w-full">
       {/* Error notification */}
       {showError && errorMessage && (
         <div className="absolute top-2 right-2 left-2 bg-red-100/90 border text-red-700 px-4 py-3 rounded-lg z-50">

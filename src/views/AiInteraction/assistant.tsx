@@ -1,15 +1,6 @@
 import { useThreadRuntime } from "@assistant-ui/react"; // Import AssistantRuntime type
 import { Thread } from "./components/assistant-ui/thread";
-import { ThreadList } from "./components/assistant-ui/thread-list";
 import { MutableRefObject, useEffect, useState } from "react"; // Import useRef
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarProvider,
-  SidebarTrigger,
-  SidebarHeader,
-} from "../../components/ui/sidebar";
-import { MessagesSquare } from "lucide-react";
 import {
   RecorderState,
   SendMessageFn,
@@ -75,31 +66,13 @@ export const Assistant = ({
   }, [setTranscriptionStatusRef]);
 
   return (
-    <SidebarProvider defaultOpen={false}>
-      <div className="flex h-dvh w-full">
-        <Sidebar>
-          <SidebarHeader className="flex items-center justify-between">
-            {/* <h2 className="text-md font-semibold px-2">Vaiced</h2> */}
-          </SidebarHeader>
-          <SidebarContent>
-            <ThreadList />
-          </SidebarContent>
-        </Sidebar>
-        <div className="absolute mt-6 ml-2 left-0 top-0 flex items-center z-50">
-          <SidebarTrigger className="mr-2 text-white hover:text-white bg-stone-950/50 hover:bg-stone-600 rounded-full p-2 cursor-pointer">
-            <MessagesSquare className="h-5 w-5" />
-          </SidebarTrigger>
-        </div>
-        <div className="flex-1 w-full h-full px-4 pt-4">
-          {/* Pass down audio state and control function */}
-          <Thread
-            recorderState={recorderState}
-            isPlayingAudio={isPlayingAudio}
-            stopAudioPlayback={stopAudioPlayback}
-            playAudioForText={playAudioForText} // Pass down the new function
-          />
-        </div>
-      </div>
-    </SidebarProvider>
+    <div className="flex-1 w-full h-full px-2 pt-2">
+      <Thread
+        recorderState={recorderState}
+        isPlayingAudio={isPlayingAudio}
+        stopAudioPlayback={stopAudioPlayback}
+        playAudioForText={playAudioForText} // Pass down the new function
+      />
+    </div>
   );
 };
