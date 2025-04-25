@@ -185,7 +185,7 @@ const ProviderForm: React.FC = () => {
     : "Add New Provider";
 
   return (
-    <div className="w-full h-full p-6 bg-background">
+    <div className="bg-background p-4 pt-12 w-full">
       <div className="ml-2 mb-6 flex items-center">
         <Button
           variant="ghost"
@@ -203,7 +203,7 @@ const ProviderForm: React.FC = () => {
       <FormProvider {...methods}>
         <form
           onSubmit={handleSubmit(formSubmit as any)}
-          className="space-y-6 max-w-3xl mx-auto"
+          className="space-y-6 max-w-2xl mx-auto"
         >
           {/* Step 1: Provider Details */}
           {step === 1 && (
