@@ -625,14 +625,35 @@ pub async fn run() {
                                 // --- AI Shortcut Logic ---
                                 } else if shortcut_clone == ai_shortcut {
                                     if event.state() == ShortcutState::Pressed {
-                                        println!("AI Shortcut (Alt+`) Pressed: Showing Main (AI Interaction) Window");
+                                        println!("AI Shortcut (Alt+`) Pressed: Toggling Main (AI Interaction) Window");
                                         if let Some(main_window) = app_handle_clone.get_webview_window("main") {
-                                            // Use tokio::spawn for window operations to avoid blocking handler
                                             tokio::spawn(async move {
-                                                // Position is set in config, window should be visible
-                                                // if let Err(e) = main_window.move_window(Position::TopRight) { eprintln!("Failed to move main window: {}", e); }
-                                                if let Err(e) = main_window.show() { eprintln!("Failed to show main window: {}", e); }
-                                                if let Err(e) = main_window.set_focus() { eprintln!("Failed to focus main window: {}", e); }
+                                                match main_window.is_visible() {
+                                                    Ok(true) => {
+                                                        println!("Main window is visible, hiding it.");
+                                                        if let Err(e) = main_window.hide() {
+                                                            eprintln!("Failed to hide main window: {}", e);
+                                                        }
+                                                    }
+                                                    Ok(false) => {
+                                                        println!("Main window is not visible, showing and focusing it.");
+                                                        if let Err(e) = main_window.show() { 
+                                                            eprintln!("Failed to show main window: {}", e); 
+                                                        }
+                                                        if let Err(e) = main_window.set_focus() { 
+                                                            eprintln!("Failed to focus main window: {}", e); 
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        eprintln!("Failed to check main window visibility: {}. Assuming not visible and attempting to show.", e);
+                                                        if let Err(e_show) = main_window.show() { 
+                                                            eprintln!("Failed to show main window (fallback): {}", e_show); 
+                                                        }
+                                                        if let Err(e_focus) = main_window.set_focus() { 
+                                                            eprintln!("Failed to focus main window (fallback): {}", e_focus); 
+                                                        }
+                                                    }
+                                                }
                                             });
                                         } else {
                                             eprintln!("Main (AI Interaction) window not found in shortcut handler.");

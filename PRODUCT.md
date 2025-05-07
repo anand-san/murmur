@@ -2,16 +2,22 @@
 
 ## Product Overview
 
-Murmur is a desktop application that enables seamless voice-to-AI interaction through a minimalist, non-intrusive interface. The application allows users to quickly record voice snippets using global keyboard shortcuts, automatically transcribes the audio, and presents the transcription to an AI assistant for immediate response—all within a streamlined workflow.
+Murmur is a desktop application that enables seamless voice interaction through a minimalist, non-intrusive interface. It offers two primary functions via global keyboard shortcuts: instantly transcribing voice to text directly into any application, and engaging with an AI assistant using voice input. Murmur streamlines workflows by minimizing context switching.
 
 ## Key Features
 
-### 1. Effortless Voice Recording
+### 1. Voice-to-AI Chat (`Cmd + \`)
 
-- **Global Shortcut Activation**: Record anytime by pressing and holding Command/Meta + ` (backtick)
-- **Visual Feedback**: Minimalist floating window with a pulsing orb indicates active recording
-- **Audio Cues**: Distinct sounds play at the start and end of recording sessions
-- **Release to Process**: Simply release the shortcut key to end recording and trigger processing
+- **Global Shortcut Activation**: Initiate voice-to-AI interaction anytime by pressing and holding `Cmd + \`` (backtick).
+- **Visual Feedback**: Minimalist floating window with a pulsing orb indicates active recording.
+- **Audio Cues**: Distinct sounds play at the start and end of recording sessions.
+- **Release to Process**: Simply release the shortcut key to end recording, transcribe, and send to the AI assistant. Results appear in a dedicated chat window.
+
+### 2. Voice-to-Text Paste (`Option + \`)
+
+- **Global Shortcut Activation**: Dictate text directly into your active application by pressing and holding `Option + \`` (backtick).
+- **Instant Transcription & Pasting**: Release the keys, and Murmur transcribes your speech and automatically pastes the text into the focused input field.
+- **Seamless Input**: Ideal for quick notes, messages, or code snippets without manual typing.
 
 ### 2. Intelligent Audio Processing
 
@@ -19,12 +25,12 @@ Murmur is a desktop application that enables seamless voice-to-AI interaction th
 - **Duration Filtering**: Only processes recordings longer than 1 second to avoid accidental activations
 - **Background Processing**: All audio handling happens in separate threads for optimal performance
 
-### 3. AI Assistant Integration
+### 4. AI Assistant Integration
 
-- **Contextual Responses**: AI processes transcribed text and provides relevant responses
-- **Dedicated Interaction Window**: Clean interface for viewing AI responses and continued conversation
-- **Direct Access**: Alternative shortcut (Alt + `) to access the AI assistant directly with text input
-- **Conversation Threading**: Support for ongoing conversations with context preservation
+- **Contextual Responses**: AI processes transcribed text from the `Cmd + \`` shortcut and provides relevant responses.
+- **Dedicated Interaction Window**: Clean interface for viewing AI responses and continued conversation initiated via ` Cmd + \`` or  `Alt + \``.
+- **Direct Text Access**: Alternative shortcut (`Alt + \``) to open the AI assistant window directly for text-based interaction.
+- **Conversation Threading**: Support for ongoing conversations with context preservation.
 
 ## Technical Architecture
 
@@ -56,10 +62,10 @@ Murmur is a desktop application that enables seamless voice-to-AI interaction th
 
 ## Target Users
 
-- Knowledge workers seeking quick information without context switching
-- Professionals who need hands-free access to AI assistance
-- Anyone looking to enhance productivity through voice-activated AI tools
-- Developers and creators who want quick answers during their workflow
+- Knowledge workers seeking quick information or text input without context switching.
+- Professionals who need hands-free access to AI assistance or dictation.
+- Anyone looking to enhance productivity through voice-activated tools.
+- Developers and creators who want quick answers or code snippets during their workflow.
 
 ## Competitive Advantage
 
