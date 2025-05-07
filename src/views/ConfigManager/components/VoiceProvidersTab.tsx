@@ -28,12 +28,12 @@ export default function VoiceProvidersTab() {
 
   // Navigate to add new provider form
   const handleAddProvider = () => {
-    navigate("/settings/provider/new/speech");
+    navigate("provider/new/speech");
   };
 
   // Navigate to edit provider form
   const handleEditProvider = (provider: Provider) => {
-    navigate(`/settings/provider/edit/${provider.id}`);
+    navigate(`provider/edit/${provider.id}`);
   };
 
   // Format providers data for display

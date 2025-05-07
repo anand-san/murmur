@@ -26,7 +26,7 @@ const formSchema = z.object({
   providerName: z.string().min(1, "Provider name is required"),
   nickName: z.string().min(1, "Nickname is required"),
   apiKey: z.string().min(1, "API key is required"),
-  baseUrl: z.string().url("Must be a valid URL").or(z.literal("")).optional(),
+  baseUrl: z.string().optional(), // Allow any string format
   models: z.string().min(1, "At least one model is required"),
   isDefault: z.boolean().default(false),
 });
@@ -64,7 +64,7 @@ const ProviderForm: React.FC = () => {
     onSuccess: () => {
       toast.success("Provider created successfully");
       queryClient.invalidateQueries({ queryKey: ["providers"] });
-      navigate("/settings");
+      navigate("/");
     },
     onError: (error) => {
       toast.error("Failed to create provider: " + error.message);
@@ -77,7 +77,7 @@ const ProviderForm: React.FC = () => {
     onSuccess: () => {
       toast.success("Provider updated successfully");
       queryClient.invalidateQueries({ queryKey: ["providers"] });
-      navigate("/settings");
+      navigate("/");
     },
     onError: (error) => {
       toast.error("Failed to update provider: " + error.message);
@@ -104,12 +104,14 @@ const ProviderForm: React.FC = () => {
       models: "",
       isDefault: false,
     },
+    mode: "onChange", // Validate on change for better user experience
   });
 
   const {
     handleSubmit,
     setValue,
-    formState: { isSubmitting },
+    trigger,
+    formState: { isSubmitting, errors },
   } = methods;
 
   // Update form values when provider data is loaded
@@ -131,9 +133,11 @@ const ProviderForm: React.FC = () => {
     }
   }, [provider, setValue]);
 
-  // Form submission handler
-  const formSubmit = async (data: FormData) => {
+  // Form submission handler - only used on final step
+  const handleFinalSubmit = async (data: FormData) => {
     try {
+      console.log("Submitting final form data:", data);
+
       // Parse models from text input
       const availableModels = parseModels(data.models);
 
@@ -163,13 +167,59 @@ const ProviderForm: React.FC = () => {
       }
     } catch (error) {
       console.error("Error submitting provider:", error);
+      toast.error(
+        `Submission error: ${
+          error instanceof Error ? error.message : "Unknown error occurred"
+        }`
+      );
     }
   };
 
-  // Navigation functions
-  const nextStep = () => setStep(step + 1);
-  const prevStep = () => setStep(step - 1);
-  const handleGoBack = () => navigate("/settings");
+  // Validate and proceed to next step
+  const handleNext = async () => {
+    console.log("Next button clicked, current step:", step);
+    let fieldsToValidate: string[] = [];
+
+    if (step === 1) {
+      fieldsToValidate = ["providerName", "nickName"];
+    } else if (step === 2) {
+      fieldsToValidate = ["apiKey"];
+    }
+
+    console.log("Validating fields:", fieldsToValidate);
+    const isStepValid = await methods.trigger(fieldsToValidate as any);
+    console.log("Step validation result:", isStepValid);
+
+    if (isStepValid) {
+      console.log("Step validation passed, proceeding to next step");
+      setStep((prevStep) => prevStep + 1);
+    } else {
+      console.log("Step validation failed:", methods.formState.errors);
+      // Show error messages
+      if (step === 1) {
+        if (methods.formState.errors.providerName) {
+          toast.error("Please select a provider");
+        } else if (methods.formState.errors.nickName) {
+          toast.error("Please enter a nickname");
+        } else {
+          toast.error("Please fill in all required fields");
+        }
+      } else if (step === 2) {
+        if (methods.formState.errors.apiKey) {
+          toast.error("Please enter a valid API key");
+        } else {
+          toast.error("Please fill in all required fields");
+        }
+      }
+    }
+  };
+
+  const handleBack = () => {
+    console.log("Going back from step:", step);
+    setStep((prevStep) => prevStep - 1);
+  };
+
+  const handleGoBack = () => navigate("/");
 
   // Loading state
   if (isEditMode && isLoading) {
@@ -202,14 +252,24 @@ const ProviderForm: React.FC = () => {
 
       <FormProvider {...methods}>
         <form
-          onSubmit={handleSubmit(formSubmit as any)}
+          onSubmit={handleSubmit((data) => {
+            console.log("Form submission", { step, data });
+            if (step === 3) {
+              // Only handle actual submission on the last step
+              return handleFinalSubmit(data);
+            } else {
+              // For other steps, just handle navigation
+              handleNext();
+              return false; // Prevent actual form submission
+            }
+          })}
           className="space-y-6 max-w-2xl mx-auto"
         >
           {/* Step 1: Provider Details */}
           {step === 1 && (
             <ProviderDetailsStep
               formMethods={methods}
-              onNext={nextStep}
+              onNext={handleNext}
               isEditMode={isEditMode}
               provider={provider}
             />
@@ -219,8 +279,8 @@ const ProviderForm: React.FC = () => {
           {step === 2 && (
             <ConnectionSettingsStep
               formMethods={methods}
-              onNext={nextStep}
-              onPrevious={prevStep}
+              onNext={handleNext}
+              onPrevious={handleBack}
             />
           )}
 
@@ -228,7 +288,7 @@ const ProviderForm: React.FC = () => {
           {step === 3 && (
             <ModelConfigurationStep
               formMethods={methods}
-              onPrevious={prevStep}
+              onPrevious={handleBack}
               isSubmitting={isSubmitting}
               isEditMode={isEditMode}
             />

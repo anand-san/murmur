@@ -285,11 +285,48 @@ pub async fn run() {
                             }
                         }
                         "show_settings" => {
-                            if let Some(window) = app.get_webview_window("main") {
-                                let _ = window.show();
-                                let _ = window.set_focus();
+                            let app_handle = app.clone();
+                            let settings_window_label = "settings";
+
+                            if let Some(window) = app_handle.get_webview_window(settings_window_label) {
+                                if let Err(e) = window.show() {
+                                    eprintln!("Failed to show settings window: {}", e);
+                                }
+                                if let Err(e) = window.set_focus() {
+                                    eprintln!("Failed to focus settings window: {}", e);
+                                }
                             } else {
-                                eprintln!("main window not found");
+                                // Window not found, try to create it
+                                println!("Settings window '{}' not found, attempting to create.", settings_window_label);
+                                match tauri::WebviewWindowBuilder::new(
+                                    &app_handle,
+                                    settings_window_label,
+                                    tauri::WebviewUrl::App("settings.html".into())
+                                )
+                                .title("Settings")
+                                .inner_size(700.0, 550.0) // Match tauri.conf.json
+                                .decorations(true)
+                                .resizable(true)
+                                .fullscreen(false)
+                                .always_on_top(false)
+                                .transparent(false)
+                                .hidden_title(false)
+                                .title_bar_style(tauri::TitleBarStyle::Visible) // Match tauri.conf.json
+                                .visible(false) // Create hidden, then show
+                                .build() {
+                                    Ok(created_window) => {
+                                        println!("Settings window '{}' created successfully.", settings_window_label);
+                                        if let Err(e) = created_window.show() {
+                                            eprintln!("Failed to show newly created settings window: {}", e);
+                                        }
+                                        if let Err(e) = created_window.set_focus() {
+                                            eprintln!("Failed to focus newly created settings window: {}", e);
+                                        }
+                                    }
+                                    Err(e) => {
+                                        eprintln!("Failed to create settings window '{}': {}", settings_window_label, e);
+                                    }
+                                }
                             }
                         }
                         "quit" => {

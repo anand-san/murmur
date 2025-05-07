@@ -21,8 +21,6 @@ import {
   MessageSquare,
 } from "lucide-react";
 
-import { useNavigate, useLocation } from "react-router-dom";
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,12 +55,6 @@ export default function SidebarContentData() {
       setOpen(false);
     }
   };
-
-  // Use navigate for routing
-  const navigate = useNavigate();
-
-  // Get current location to determine active route
-  const location = useLocation();
 
   // Get the currently selected model name
   const currentModelName = getModelNameById(selectedModelId) || "Select Model";
@@ -105,7 +97,7 @@ export default function SidebarContentData() {
                       variant={"link"}
                       className="cursor-pointer flex items-center justify-start ml-0 pl-0 gap-2 w-full hover:no-underline"
                       onClick={() => {
-                        navigate("/");
+                        // Todo Open New Chat
                         closeSidebar();
                       }}
                     >
@@ -127,7 +119,7 @@ export default function SidebarContentData() {
                 <SidebarMenuButton
                   isActive={location.pathname === "/settings"}
                   onClick={() => {
-                    navigate("/settings");
+                    // TODO: Open Settings Window
                     closeSidebar();
                   }}
                   className="cursor-pointer"

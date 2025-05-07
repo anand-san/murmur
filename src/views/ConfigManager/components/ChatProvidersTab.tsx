@@ -30,12 +30,12 @@ export default function ChatProvidersTab() {
 
   // Navigate to add new provider form
   const handleAddProvider = () => {
-    navigate("/settings/provider/new/chat");
+    navigate("/provider/new/chat");
   };
 
   // Navigate to edit provider form
   const handleEditProvider = (provider: Provider) => {
-    navigate(`/settings/provider/edit/${provider.id}`);
+    navigate(`/provider/edit/${provider.id}`);
   };
 
   // Format providers data for display

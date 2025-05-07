@@ -7,7 +7,6 @@ import ProviderCard from "../ProviderCard";
 
 const ProviderDetailsStep: React.FC<StepProps> = ({
   formMethods,
-  onNext,
   isEditMode,
   provider,
 }) => {
@@ -30,30 +29,47 @@ const ProviderDetailsStep: React.FC<StepProps> = ({
 
   // Check if can proceed to next step
   const canProceedToNextStep = () => {
-    const { providerName, nickName } = watch();
-    return providerName !== "" && nickName !== "";
+    const values = watch();
+    console.log("Current form values in canProceedToNextStep:", values);
+
+    const providerName = values.providerName || "";
+    const nickName = values.nickName || "";
+
+    const canProceed = providerName !== "" && nickName !== "";
+    console.log(
+      `Can proceed: ${canProceed}, providerName: ${providerName}, nickName: ${nickName}`
+    );
+
+    return canProceed;
   };
 
   return (
     <div className="space-y-6">
       {!isEditMode ? (
         <div className="space-y-2">
+          <Label htmlFor="providerName" className="block mb-2 font-medium">
+            Select Provider <span className="text-red-500">*</span>
+          </Label>
           <div className="flex space-x-4 py-2 px-1 w-full pb-4 overflow-y-auto no-scrollbar">
             {providerOptions.map((option) => {
               // Check if the provider is "Custom" or another special case
               const isCustomProvider = option.value === "Custom";
               const imagePath = `/images/providers/${option.value.toLowerCase()}.png`;
+              const isSelected = watch("providerName") === option.value;
 
               return (
                 <ProviderCard
                   key={option.value}
                   name={option.label}
                   imageSrc={isCustomProvider ? "" : imagePath}
-                  onClick={() => setValue("providerName", option.value)}
+                  onClick={() => {
+                    console.log("Setting provider name to:", option.value);
+                    setValue("providerName", option.value);
+                  }}
                   className={`${
-                    watch("providerName") === option.value
-                      ? "border-primary bg-primary/5"
-                      : ""
+                    isSelected
+                      ? "border-primary bg-primary/5 ring-2 ring-primary"
+                      : "border-gray-200 hover:border-gray-300"
                   }`}
                 >
                   {isCustomProvider && (
@@ -61,13 +77,35 @@ const ProviderDetailsStep: React.FC<StepProps> = ({
                       <span className="text-2xl">⚙️</span>
                     </div>
                   )}
+                  {isSelected && (
+                    <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-1 w-6 h-6 flex items-center justify-center">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </div>
+                  )}
                 </ProviderCard>
               );
             })}
           </div>
           {errors.providerName && (
-            <p className="text-sm text-red-500">
+            <p className="text-sm text-red-500 mt-1">
               {errors.providerName.message}
+            </p>
+          )}
+          {!watch("providerName") && (
+            <p className="text-sm text-amber-600 mt-1">
+              Please select a provider from the options above
             </p>
           )}
         </div>
@@ -82,24 +120,56 @@ const ProviderDetailsStep: React.FC<StepProps> = ({
       )}
 
       <div className="space-y-2">
-        <Label htmlFor="nickName">Nickname</Label>
+        <Label htmlFor="nickName" className="block font-medium">
+          Nickname <span className="text-red-500">*</span>
+        </Label>
         <Input
           id="nickName"
-          {...register("nickName")}
+          {...register("nickName", { required: "Nickname is required" })}
           placeholder="Enter a nickname for this provider"
+          className={
+            errors.nickName ? "border-red-400 focus-visible:ring-red-400" : ""
+          }
+          onChange={(e) => {
+            // Force update the form value
+            const value = e.target.value;
+            console.log("Setting nickname value:", value);
+            setValue("nickName", value);
+          }}
         />
         {errors.nickName && (
-          <p className="text-sm text-red-500">{errors.nickName.message}</p>
+          <p className="text-sm text-red-500 mt-1">{errors.nickName.message}</p>
         )}
+        <p className="text-xs text-gray-500">
+          This name will be used to identify this provider in your settings
+        </p>
       </div>
 
-      <div className="flex justify-end mt-6">
-        <Button
-          type="button"
-          onClick={onNext}
-          disabled={!canProceedToNextStep()}
-        >
+      <div className="flex justify-between items-center mt-6">
+        <div className="text-sm">
+          {(errors.providerName || errors.nickName) && (
+            <span className="text-amber-600">
+              Please complete all required fields to continue
+            </span>
+          )}
+        </div>
+        <Button type="submit" className="bg-primary hover:bg-primary/90">
           Next
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="ml-2"
+          >
+            <path d="M5 12h14"></path>
+            <path d="m12 5 7 7-7 7"></path>
+          </svg>
         </Button>
       </div>
     </div>

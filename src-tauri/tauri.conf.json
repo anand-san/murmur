@@ -38,6 +38,21 @@
           "radius": 60,
           "color": "#000000"
         }
+      },
+      {
+        "label": "settings",
+        "title": "Settings",
+        "url": "settings.html",
+        "width": 700,
+        "height": 550,
+        "decorations": true,
+        "visible": false,
+        "resizable": true,
+        "fullscreen": false,
+        "alwaysOnTop": false,
+        "transparent": false,
+        "hiddenTitle": false,
+        "titleBarStyle": "Visible"
       }
     ],
     "security": {
