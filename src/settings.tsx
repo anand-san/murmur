@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/sonner"; // Adjusted path based on project structure
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-import ProviderForm from "./views/ConfigManager/components/ProviderForm";
 
 const SettingsRootComponent: React.FC = () => {
   const queryClient = new QueryClient();
@@ -19,8 +18,6 @@ const SettingsRootComponent: React.FC = () => {
             <div className="p-4 bg-background text-foreground">
               <Routes>
                 <Route path="/" element={<ConfigManagerWindow />} />
-                <Route path="/provider/new/:type" element={<ProviderForm />} />
-                <Route path="/provider/edit/:id" element={<ProviderForm />} />
                 <Route path="*" element={<Navigate to={"/"} />} />
               </Routes>
             </div>
