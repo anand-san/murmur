@@ -2,8 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Capability for the main window",
-  "windows": ["main", "recorder", "ai_interaction"],
+  "windows": ["main", "recorder", "ai_interaction", "settings"],
   "permissions": [
+    "store:default",
     "core:default",
     "global-shortcut:allow-is-registered",
     "global-shortcut:allow-register",

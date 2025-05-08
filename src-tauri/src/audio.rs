@@ -23,7 +23,6 @@ pub(crate) fn record_audio_stream(
         stream_config.sample_rate.0, stream_config.channels, sample_format
     );
 
-
     let process_data = move |data: &[i16]| {
         if flag_clone.load(Ordering::SeqCst) {
             for chunk in data.chunks(AUDIO_CHUNK_SIZE_SAMPLES) {
@@ -78,7 +77,6 @@ pub(crate) fn record_audio_stream(
         .play()
         .map_err(|e| format!("Could not start stream: {}", e))?;
     println!("Recording stream started. Sending data via channel.");
-
 
     while recording_flag.load(Ordering::SeqCst) {
         thread::sleep(Duration::from_millis(50));

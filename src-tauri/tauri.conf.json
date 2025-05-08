@@ -15,9 +15,9 @@
       {
         "label": "main",
         "title": "Murmur",
-        "url": "/ai-interaction",
-        "width": 450,
-        "height": 550,
+        "url": "/",
+        "width": 850,
+        "height": 600,
         "decorations": true,
         "browserExtensionsEnabled": false,
         "trafficLightPosition": {
@@ -42,21 +42,33 @@
       {
         "label": "settings",
         "title": "Settings",
-        "url": "settings.html",
-        "width": 700,
-        "height": 550,
+        "url": "/",
+        "width": 500,
+        "height": 400,
         "decorations": true,
+        "browserExtensionsEnabled": false,
+        "trafficLightPosition": {
+          "x": 10,
+          "y": 10
+        },
+        "visibleOnAllWorkspaces": false,
         "visible": false,
         "resizable": true,
         "fullscreen": false,
+        "focus": false,
         "alwaysOnTop": false,
         "transparent": false,
-        "hiddenTitle": false,
-        "titleBarStyle": "Visible"
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay",
+        "windowEffects": {
+          "effects": ["blur", "acrylic"],
+          "radius": 60,
+          "color": "#000000"
+        }
       }
     ],
     "security": {
-      "csp": "default-src 'self' blob: data: media: http://localhost:3000; connect-src 'self' http://localhost:3000; script-src 'self' 'unsafe-eval';"
+      "csp": "default-src 'self' blob: data: media: *; connect-src 'self' *; script-src 'self' 'unsafe-eval';"
     }
   },
   "bundle": {

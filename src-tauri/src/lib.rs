@@ -2,19 +2,13 @@ mod audio;
 mod screenshot;
 mod state;
 
-use state::{
-    AppStateRef,
-    AudioConfig,
-    AudioConfigRef,
-    RecorderState,
-    RecordingFlag,
-};
-use std::sync::atomic::{AtomicBool, Ordering};
 use cpal::traits::{DeviceTrait, HostTrait};
 use crossbeam_channel::unbounded;
 use rodio::Sink;
+use state::{AppStateRef, AudioConfig, AudioConfigRef, RecorderState, RecordingFlag};
 use std::fs::File;
 use std::io::BufReader;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 use tauri::menu::{MenuBuilder, MenuItem};
@@ -22,6 +16,8 @@ use tauri::tray::TrayIconBuilder;
 use tauri::Manager;
 use tauri::{path::BaseDirectory, Emitter};
 use tauri_plugin_positioner::{Position, WindowExt};
+use tauri_plugin_store::StoreExt;
+use serde_json::json;
 
 fn emit_state_change(app_handle: &tauri::AppHandle, new_state: RecorderState) {
     println!("Emitting state change: {:?}", new_state);
@@ -30,11 +26,7 @@ fn emit_state_change(app_handle: &tauri::AppHandle, new_state: RecorderState) {
     }
 }
 
-fn create_wav_memory(
-    pcm_data: &[i16],
-    channels: u16,
-    sample_rate: u32,
-) -> Result<Vec<u8>, String> {
+fn create_wav_memory(pcm_data: &[i16], channels: u16, sample_rate: u32) -> Result<Vec<u8>, String> {
     let bits_per_sample: u16 = 16;
     let bytes_per_sample = bits_per_sample / 8;
     let block_align = channels * bytes_per_sample;
@@ -83,30 +75,26 @@ fn play_sound_rodio(app_handle: &tauri::AppHandle, sound_name: &str) {
         }
     };
 
-    thread::spawn(move || {
-        match rodio::OutputStream::try_default() {
-            Ok((_stream, stream_handle)) => {
-                match File::open(&sound_path) {
-                    Ok(file) => {
-                        let file = BufReader::new(file);
-                        match rodio::Decoder::new(file) {
-                            Ok(source) => {
-                                let sink = Sink::try_new(&stream_handle).unwrap();
-                                sink.set_volume(0.5);
-                                sink.append(source);
-                                sink.sleep_until_end();
-                                println!("Played sound: {:?}", sound_path);
-                            }
-                            Err(e) => {
-                                eprintln!("Error decoding sound file {:?}: {}", sound_path, e)
-                            }
-                        }
+    thread::spawn(move || match rodio::OutputStream::try_default() {
+        Ok((_stream, stream_handle)) => match File::open(&sound_path) {
+            Ok(file) => {
+                let file = BufReader::new(file);
+                match rodio::Decoder::new(file) {
+                    Ok(source) => {
+                        let sink = Sink::try_new(&stream_handle).unwrap();
+                        sink.set_volume(0.5);
+                        sink.append(source);
+                        sink.sleep_until_end();
+                        println!("Played sound: {:?}", sound_path);
                     }
-                    Err(e) => eprintln!("Error opening sound file {:?}: {}", sound_path, e),
+                    Err(e) => {
+                        eprintln!("Error decoding sound file {:?}: {}", sound_path, e)
+                    }
                 }
             }
-            Err(e) => eprintln!("Error getting default audio output stream: {}", e),
-        }
+            Err(e) => eprintln!("Error opening sound file {:?}: {}", sound_path, e),
+        },
+        Err(e) => eprintln!("Error getting default audio output stream: {}", e),
     });
 }
 
@@ -130,8 +118,11 @@ fn show_window(window: tauri::AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> Result<(), String> {
-    println!("Executing perform_clipboard_paste command for text: '{}'", text);
-    
+    println!(
+        "Executing perform_clipboard_paste command for text: '{}'",
+        text
+    );
+
     use tauri_plugin_clipboard_manager::ClipboardExt;
     let previous_clipboard = app_handle.clipboard().read_text().unwrap_or_default();
     println!("Saved current clipboard content");
@@ -147,7 +138,7 @@ async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> 
     {
         println!("Attempting to simulate paste via AppleScript using shell plugin...");
         use tauri_plugin_shell::ShellExt;
-        
+
         let script = r#"tell application "System Events" to keystroke "v" using command down"#;
         let shell = app_handle.shell(); // Get the shell instance
         let output_result = shell
@@ -161,18 +152,30 @@ async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> 
                 if output.status.success() {
                     println!("AppleScript paste command executed successfully.");
                     if !output.stdout.is_empty() {
-                        println!("osascript stdout: {}", String::from_utf8_lossy(&output.stdout));
+                        println!(
+                            "osascript stdout: {}",
+                            String::from_utf8_lossy(&output.stdout)
+                        );
                     }
                 } else {
-                    eprintln!("AppleScript paste command failed with status: {:?}", output.status);
+                    eprintln!(
+                        "AppleScript paste command failed with status: {:?}",
+                        output.status
+                    );
                     if !output.stderr.is_empty() {
-                        eprintln!("osascript stderr: {}", String::from_utf8_lossy(&output.stderr));
+                        eprintln!(
+                            "osascript stderr: {}",
+                            String::from_utf8_lossy(&output.stderr)
+                        );
                     }
                     return Err(format!("AppleScript execution failed: {:?}", output.status));
                 }
             }
             Err(e) => {
-                eprintln!("Failed to execute osascript for paste using shell plugin: {}", e);
+                eprintln!(
+                    "Failed to execute osascript for paste using shell plugin: {}",
+                    e
+                );
                 return Err(format!("Failed to execute AppleScript: {}", e));
             }
         }
@@ -188,7 +191,7 @@ async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> 
         eprintln!("Failed to restore clipboard: {}", e);
         return Err(format!("Failed to restore clipboard: {}", e));
     }
-    println!("Original clipboard content restored after paste and delay");    
+    println!("Original clipboard content restored after paste and delay");
     Ok(())
 }
 
@@ -200,6 +203,7 @@ pub async fn run() {
     let recording_flag = RecordingFlag::new(AtomicBool::new(false));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_http::init())
@@ -214,6 +218,48 @@ pub async fn run() {
         .manage(app_state.clone())
         .manage(recording_flag.clone())
         .setup(move |app| {
+            // ---- BEGIN STORE SETUP ----
+            let store_file_name = "settings.json";
+            match app.store(store_file_name) {
+                Ok(store) => {
+                    let use_local_mode_key = "use_local_mode";
+                    let backend_url_key = "backend_url";
+                    let mut defaults_were_set = false;
+
+                    // Set default for use_local_mode if not present
+                    // Set default for use_local_mode if not present
+                    if !store.has(use_local_mode_key) { // Corrected: store.has directly returns bool
+                        // Assuming store.set() panics on error or returns () based on persistent compiler errors
+                        store.set(use_local_mode_key, json!(false));
+                        println!("[STORE] Initialized '{}' to false in {}", use_local_mode_key, store_file_name);
+                        defaults_were_set = true;
+                        // If store.set can error and doesn't panic, this approach will miss handling it.
+                        // However, compiler insists the expression is type () in match.
+                    }
+
+                    // Set default for backend_url if not present
+                    if !store.has(backend_url_key) { // Corrected: store.has directly returns bool
+                        // Assuming store.set() panics on error or returns ()
+                        store.set(backend_url_key, json!("http://localhost:3000/api"));
+                        println!("[STORE] Initialized '{}' to 'http://localhost:3000/api' in {}", backend_url_key, store_file_name);
+                        defaults_were_set = true;
+                    }
+
+                    if defaults_were_set {
+                        if let Err(e) = store.save() {
+                            eprintln!("[STORE] Error saving store after setting defaults: {}", e);
+                        } else {
+                            println!("[STORE] Settings saved to {} after initializing defaults.", store_file_name);
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[STORE] CRITICAL: Failed to load or create store '{}': {}. Store functionality will be impaired.", store_file_name, e);
+                    // Depending on how critical the store is, you might want to return an Err here
+                    // return Err(Box::new(e) as Box<dyn std::error::Error + Send + Sync + 'static>);
+                }
+            }
+            // ---- END STORE SETUP ----
             #[cfg(target_os = "macos")]{
                 app.set_activation_policy(tauri::ActivationPolicy::Accessory);
             };

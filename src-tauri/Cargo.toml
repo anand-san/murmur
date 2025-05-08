@@ -37,6 +37,7 @@ image = { version = "0.25", features = ["png"] }
 thiserror = "1.0"
 tauri-plugin-clipboard-manager = "2"
 tauri-plugin-shell = "2"
+tauri-plugin-store = "2"
 
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
