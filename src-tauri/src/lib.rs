@@ -240,8 +240,8 @@ pub async fn run() {
                     // Set default for backend_url if not present
                     if !store.has(backend_url_key) { // Corrected: store.has directly returns bool
                         // Assuming store.set() panics on error or returns ()
-                        store.set(backend_url_key, json!("http://localhost:3000/api"));
-                        println!("[STORE] Initialized '{}' to 'http://localhost:3000/api' in {}", backend_url_key, store_file_name);
+                        store.set(backend_url_key, json!("http://localhost:5555/api"));
+                        println!("[STORE] Initialized '{}' to 'http://localhost:5555/api' in {}", backend_url_key, store_file_name);
                         defaults_were_set = true;
                     }
 

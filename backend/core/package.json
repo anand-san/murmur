@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "dev": "bun run --hot index.ts",
-    "build": "bun build src/index.ts --outdir=dist --minify",
+    "build": "bun build ./index.ts --outdir=dist --minify",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",
     "db:up": "drizzle-kit up",

@@ -4,7 +4,7 @@ FROM oven/bun:1.2-slim as builder
 WORKDIR /usr/src/app
 
 # Install dependencies (including devDependencies needed for build)
-COPY package.json bun.lockb tsconfig.json ./
+COPY package.json bun.lockb tsconfig.json index.ts app.ts drizzle.config.ts ./
 RUN bun install --frozen-lockfile
 
 # Copy source code
@@ -22,9 +22,9 @@ WORKDIR /usr/src/app
 # Copy only necessary artifacts from the builder stage
 COPY --from=builder /usr/src/app/dist ./dist
 
-# Expose the port the app runs on (default 3000)
+# Expose the port the app runs on (default 5555)
 # The actual port can be overridden by the PORT environment variable
-EXPOSE 3000
+EXPOSE 5555
 
 # Define the command to run the built application
 # We run the compiled JS file directly using bun

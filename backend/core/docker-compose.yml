@@ -6,10 +6,10 @@ services:
       context: . # Use the Dockerfile in the current directory (backend/core)
       dockerfile: Dockerfile # Specify the Dockerfile name
     ports:
-      - "3000:3000" # Map host port 3000 to container port 3000
+      - "5555:5555" # Map host port 5555 to container port 5555
     env_file:
       - .env # Load environment variables from the .env file in the same directory
     environment:
       # Define environment variables directly
-      PORT: 3000
+      PORT: 5555
     restart: unless-stopped # Restart policy
