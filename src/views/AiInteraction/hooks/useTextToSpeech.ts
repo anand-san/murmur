@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useThreadRuntime } from "@assistant-ui/react";
 import { generateSpeech } from "../../../api/speech/speech";
 
@@ -129,27 +129,27 @@ export const useTextToSpeech = () => {
     }
   };
 
-  // Effect to manage the subscription and cleanup
-  useEffect(() => {
-    // Subscribe directly when the hook mounts or runtime changes
-    const cleanupSubscription = runtime.unstable_on("run-end", handleRunEnd);
+  // // Plays the audio when message is received
+  // useEffect(() => {
+  //   // Subscribe directly when the hook mounts or runtime changes
+  //   const cleanupSubscription = runtime.unstable_on("run-end", handleRunEnd);
 
-    // Cleanup function for the effect
-    return () => {
-      cleanupSubscription(); // Unsubscribe from the event
-      stopAudioPlayback(); // Stop audio if component unmounts
-      // Close the audio context on unmount
-      if (audioContextRef.current) {
-        audioContextRef.current
-          .close()
-          .catch((e) =>
-            console.warn("TTS hook: Error closing AudioContext:", e)
-          );
-        audioContextRef.current = null;
-      }
-    };
-  }, [runtime]); // Re-run effect if runtime changes
+  //   // Cleanup function for the effect
+  //   return () => {
+  //     cleanupSubscription(); // Unsubscribe from the event
+  //     stopAudioPlayback(); // Stop audio if component unmounts
+  //     // Close the audio context on unmount
+  //     if (audioContextRef.current) {
+  //       audioContextRef.current
+  //         .close()
+  //         .catch((e) =>
+  //           console.warn("TTS hook: Error closing AudioContext:", e)
+  //         );
+  //       audioContextRef.current = null;
+  //     }
+  //   };
+  // }, [runtime]); // Re-run effect if runtime changes
 
   // Return the state and control functions
-  return { isPlayingAudio, stopAudioPlayback, playAudioForText };
+  return { isPlayingAudio, stopAudioPlayback, playAudioForText, handleRunEnd };
 };
