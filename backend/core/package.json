@@ -7,7 +7,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",
     "db:up": "drizzle-kit up",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "test": "vitest"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^1.2.9",
@@ -29,6 +30,7 @@
     "@types/bun": "latest",
     "@types/pg": "^8.15.1",
     "drizzle-kit": "^0.31.1",
-    "tsx": "^4.19.4"
+    "tsx": "^4.19.4",
+    "vitest": "^3.1.3"
   }
 }

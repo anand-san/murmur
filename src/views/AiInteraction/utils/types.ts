@@ -4,7 +4,10 @@ export interface Model {
 }
 
 export interface ModelProvider {
+  id: number;
   providerName: string;
+  providerSdkId: string;
+  baseUrl: string | null;
   models: Model[];
-  image?: string;
+  image: string | null;
 }
