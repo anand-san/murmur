@@ -5,9 +5,8 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createMistral } from "@ai-sdk/mistral";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-import { db } from "./db";
 import { getRegistryProvidersConfig } from "./service/configService/modelRegistry";
-import { ALLOWED_PROVIDERS } from "./service/configService/constants";
+import { ALLOWED_PROVIDERS } from "./shared/types/config";
 
 type ProviderFactory = (config: {
   apiKey?: string;

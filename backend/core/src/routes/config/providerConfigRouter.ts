@@ -9,16 +9,10 @@ import {
   updateProvider,
   deleteProvider,
 } from "../../service/configService/providerConfigService";
-import { ALLOWED_PROVIDERS } from "../../service/configService/constants";
-const ProviderCreateSchema = z.object({
-  name: z.string().min(1),
-  provider_id: z.enum(ALLOWED_PROVIDERS),
-  api_key: z.string().min(1),
-  base_url: z.string().optional().nullable(),
-  image_url: z.string().optional().nullable(),
-});
-
-const ProviderUpdateSchema = ProviderCreateSchema.partial();
+import {
+  ProviderCreateSchema,
+  ProviderUpdateSchema,
+} from "../../shared/types/config";
 
 export const providerConfigRouter = new Hono()
   .post("/", zValidator("json", ProviderCreateSchema), async (c) => {

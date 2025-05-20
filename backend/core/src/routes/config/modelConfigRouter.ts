@@ -9,22 +9,11 @@ import {
   updateModel,
   deleteModel,
 } from "../../service/configService/modelConfigService";
-import { ALLOWED_PROVIDERS } from "../../service/configService/constants";
 import { getProviderBySdkId } from "../../service/configService/providerConfigService";
-
-const ModelCreateSchema = z.object({
-  name: z.string().min(1),
-  provider_id: z.enum(ALLOWED_PROVIDERS),
-  model_id: z.string().min(1),
-  is_default: z.boolean().optional(),
-  is_enabled: z.boolean().optional(),
-});
-
-const ModelUpdateSchema = ModelCreateSchema.pick({
-  name: true,
-  is_default: true,
-  is_enabled: true,
-});
+import {
+  ModelCreateSchema,
+  ModelUpdateSchema,
+} from "../../shared/types/config";
 
 export const modelConfigRouter = new Hono()
   .post("/", zValidator("json", ModelCreateSchema), async (c) => {
