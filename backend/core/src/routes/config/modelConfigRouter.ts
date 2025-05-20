@@ -73,7 +73,7 @@ export const modelConfigRouter = new Hono()
   .get("/provider/:providerId", async (c) => {
     const providerId = c.req.param("providerId");
     if (!providerId) {
-      return c.json({ error: "Invalid provider ID" }, 400);
+      throw new Error("Invalid provider ID");
     }
     try {
       const models = await getModelsByProviderId(providerId);
@@ -93,13 +93,13 @@ export const modelConfigRouter = new Hono()
       );
     }
   })
-  .get("/:modelId", async (c) => {
-    const modelId = c.req.param("modelId");
-    if (!modelId) {
-      return c.json({ error: "Invalid model ID" }, 400);
+  .get("/:model_id", async (c) => {
+    const model_id = c.req.param("model_id");
+    if (!model_id) {
+      throw new Error("Invalid model ID");
     }
     try {
-      const model = await getModelById(modelId);
+      const model = await getModelById(model_id);
       if (!model) {
         return c.json(
           {
@@ -128,9 +128,9 @@ export const modelConfigRouter = new Hono()
     }
   })
 
-  .put("/:modelId", zValidator("json", ModelUpdateSchema), async (c) => {
-    const modelId = c.req.param("modelId");
-    if (!modelId) {
+  .put("/:model_id", zValidator("json", ModelUpdateSchema), async (c) => {
+    const model_id = c.req.param("model_id");
+    if (!model_id) {
       throw new Error("Invalid model ID");
     }
     const data = c.req.valid("json");
@@ -139,7 +139,7 @@ export const modelConfigRouter = new Hono()
         throw new Error("No update data provided");
       }
 
-      const updatedModel = await updateModel(modelId, {
+      const updatedModel = await updateModel(model_id, {
         ...data,
       });
 
@@ -171,13 +171,13 @@ export const modelConfigRouter = new Hono()
     }
   })
 
-  .delete("/:modelId", async (c) => {
-    const modelId = c.req.param("modelId");
-    if (!modelId) {
+  .delete("/:model_id", async (c) => {
+    const model_id = c.req.param("model_id");
+    if (!model_id) {
       throw new Error("Invalid model ID");
     }
     try {
-      const deletedModel = await deleteModel(modelId);
+      const deletedModel = await deleteModel(model_id);
       if (!deletedModel) {
         throw new Error("Model not found");
       }
@@ -197,13 +197,13 @@ export const modelConfigRouter = new Hono()
       );
     }
   })
-  .post("/:id/set-default", async (c) => {
-    const modelId = c.req.param("id");
-    if (!modelId) {
+  .post("/:model_id/set-default", async (c) => {
+    const model_id = c.req.param("model_id");
+    if (!model_id) {
       throw new Error("Invalid model ID");
     }
     try {
-      const updatedModel = await setDefaultModel(modelId);
+      const updatedModel = await setDefaultModel(model_id);
 
       return c.json({
         success: true,

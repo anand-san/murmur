@@ -70,12 +70,12 @@ export const providerConfigRouter = new Hono()
   .get("/:provider_id", async (c) => {
     const provider_id = c.req.param("provider_id");
     if (!provider_id) {
-      return c.json({ error: "Invalid provider ID" }, 400);
+      throw new Error("Invalid provider ID");
     }
     try {
       const provider = await getProviderBySdkId(provider_id);
       if (!provider) {
-        return c.json({ error: "Provider not found" }, 404);
+        throw new Error("Provider not found");
       }
       return c.json(
         {
@@ -99,16 +99,16 @@ export const providerConfigRouter = new Hono()
   .put("/:provider_id", zValidator("json", ProviderUpdateSchema), async (c) => {
     const provider_id = c.req.param("provider_id");
     if (!provider_id) {
-      return c.json({ error: "Invalid provider ID" }, 400);
+      throw new Error("Invalid provider ID");
     }
     const data = c.req.valid("json");
     try {
       if (Object.keys(data).length === 0) {
-        return c.json({ error: "No update data provided" }, 400);
+        throw new Error("No update data provided");
       }
       const updatedProvider = await updateProvider(provider_id, data);
       if (!updatedProvider) {
-        return c.json({ error: "Provider not found or no changes made" }, 404);
+        throw new Error("Provider not found or no changes made");
       }
       return c.json(
         {
@@ -132,12 +132,12 @@ export const providerConfigRouter = new Hono()
   .delete("/:provider_id", async (c) => {
     const provider_id = c.req.param("provider_id");
     if (!provider_id) {
-      return c.json({ error: "Invalid provider ID" }, 400);
+      throw new Error("Invalid provider ID");
     }
     try {
       const deletedProvider = await deleteProvider(provider_id);
       if (!deletedProvider) {
-        return c.json({ error: "Provider not found" }, 404);
+        throw new Error("Provider not found");
       }
       return c.json(
         {
