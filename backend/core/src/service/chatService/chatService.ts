@@ -1,18 +1,19 @@
 import { CoreMessage, StreamTextResult, generateText, streamText } from "ai";
 import { DEFAULT_SYSTEM_PROMPT } from "../../config";
-import { createFreshProviderRegistry } from "../../registry"; // Import createFreshProviderRegistry
+import { createFreshProviderRegistry } from "../../registry";
+import { getDefaultModel } from "../configService/modelConfigService";
 
 export const generateChatCompletion = async (
   messages: CoreMessage[],
   modelId?: string
 ): Promise<string> => {
   try {
-    const defaultModelId = "groq:llama-3.3-70b-versatile";
-    const selectedModelId = modelId || defaultModelId;
+    const defaultModelId = await getDefaultModel();
+    const selectedModelId = modelId || defaultModelId?.id;
 
-    const currentRegistry = await createFreshProviderRegistry(); // Create fresh registry for the request
+    const currentRegistry = await createFreshProviderRegistry();
     const result = generateText({
-      model: currentRegistry.languageModel(selectedModelId as any),
+      model: currentRegistry.languageModel(selectedModelId),
       messages: messages,
       temperature: 0.5,
       maxTokens: 4000,
@@ -34,11 +35,11 @@ export const streamChatCompletion = async (
   modelId?: string
 ): Promise<StreamTextResult<any, any>> => {
   try {
-    const defaultModelId = "groq:llama-3.3-70b-versatile";
-    const selectedModelId = modelId || defaultModelId;
-    const currentRegistry = await createFreshProviderRegistry(); // Create fresh registry for the request
+    const defaultModelId = await getDefaultModel();
+    const selectedModelId = modelId || defaultModelId?.id;
+    const currentRegistry = await createFreshProviderRegistry();
 
-    const model = currentRegistry.languageModel(selectedModelId as any);
+    const model = currentRegistry.languageModel(selectedModelId);
 
     const result = streamText({
       model,

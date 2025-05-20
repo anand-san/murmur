@@ -1,5 +1,5 @@
 {
-  "id": "5ca4967e-929d-487f-8e74-6bb939dc61de",
+  "id": "18b422f0-4436-4ecd-aee0-59206595c81f",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -33,27 +33,29 @@
         },
         "provider_id": {
           "name": "provider_id",
-          "type": "integer",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
-        "model_sdk_id": {
-          "name": "model_sdk_id",
+        "model_id": {
+          "name": "model_id",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "now()"
         },
         "is_default": {
           "name": "is_default",
@@ -72,28 +74,35 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "provider_models_provider_id_providers_id_fk": {
-          "name": "provider_models_provider_id_providers_id_fk",
+        "provider_models_provider_id_providers_provider_id_fk": {
+          "name": "provider_models_provider_id_providers_provider_id_fk",
           "tableFrom": "provider_models",
           "tableTo": "providers",
           "columnsFrom": [
             "provider_id"
           ],
           "columnsTo": [
-            "id"
+            "provider_id"
           ],
-          "onDelete": "no action",
+          "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "provider_id_model_sdk_id_unique": {
-          "name": "provider_id_model_sdk_id_unique",
+        "provider_models_model_id_unique": {
+          "name": "provider_models_model_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "model_id"
+          ]
+        },
+        "provider_id_model_id_unique": {
+          "name": "provider_id_model_id_unique",
           "nullsNotDistinct": false,
           "columns": [
             "provider_id",
-            "model_sdk_id"
+            "model_id"
           ]
         }
       },
@@ -128,8 +137,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "provider_sdk_id": {
-          "name": "provider_sdk_id",
+        "provider_id": {
+          "name": "provider_id",
           "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
@@ -142,7 +151,7 @@
         },
         "api_key": {
           "name": "api_key",
-          "type": "varchar(255)",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         },
@@ -154,13 +163,21 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "integer",
+          "type": "timestamp",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "integer",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        },
+        "iv": {
+          "name": "iv",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
         }
@@ -176,11 +193,11 @@
             "name"
           ]
         },
-        "providers_provider_sdk_id_unique": {
-          "name": "providers_provider_sdk_id_unique",
+        "providers_provider_id_unique": {
+          "name": "providers_provider_id_unique",
           "nullsNotDistinct": false,
           "columns": [
-            "provider_sdk_id"
+            "provider_id"
           ]
         }
       },

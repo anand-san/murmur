@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mocked } from "vitest";
 import { testClient } from "hono/testing";
-import { modelConfigRouter } from "./modelConfigRouter";
-import * as modelConfigService from "../service/modelConfigService";
+import { modelConfigRouter } from "./config/configRouter";
+import * as modelConfigService from "../service/configService/modelConfigService";
 
 // Mock the entire modelConfigService
 vi.mock("../service/modelConfigService");

@@ -1,0 +1,238 @@
+import { zValidator } from "@hono/zod-validator";
+import { Hono } from "hono";
+import { z } from "zod";
+import {
+  createModel,
+  setDefaultModel,
+  getModelsByProviderId,
+  getModelById,
+  updateModel,
+  deleteModel,
+} from "../../service/configService/modelConfigService";
+import { ALLOWED_PROVIDERS } from "../../service/configService/constants";
+import { getProviderBySdkId } from "../../service/configService/providerConfigService";
+
+const ModelCreateSchema = z.object({
+  name: z.string().min(1),
+  provider_id: z.enum(ALLOWED_PROVIDERS),
+  model_id: z.string().min(1),
+  is_default: z.boolean().optional(),
+  is_enabled: z.boolean().optional(),
+});
+
+const ModelUpdateSchema = ModelCreateSchema.pick({
+  name: true,
+  is_default: true,
+  is_enabled: true,
+});
+
+export const modelConfigRouter = new Hono()
+  .post("/", zValidator("json", ModelCreateSchema), async (c) => {
+    const data = c.req.valid("json");
+    try {
+      const provider = await getProviderBySdkId(data.provider_id);
+      if (!provider) {
+        return c.json(
+          {
+            success: false,
+            message: "Provider not found",
+            data: null,
+          },
+          404
+        );
+      }
+      const model = await getModelById(data.model_id);
+      if (model) {
+        return c.json(
+          {
+            success: false,
+            message: "Model already exists",
+            data: null,
+          },
+          400
+        );
+      }
+
+      const newModel = await createModel({
+        ...data,
+        is_default: data.is_default === undefined ? false : data.is_default,
+        is_enabled: data.is_enabled === undefined ? true : data.is_enabled,
+      });
+
+      if (newModel.is_default) {
+        await setDefaultModel(newModel.id);
+      }
+      return c.json(
+        {
+          success: true,
+          message: "Model created successfully",
+          data: newModel,
+        },
+        201
+      );
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          message: "Failed to create model",
+          data: error.message,
+        },
+        500
+      );
+    }
+  })
+  .get("/provider/:providerId", async (c) => {
+    const providerId = c.req.param("providerId");
+    if (!providerId) {
+      return c.json({ error: "Invalid provider ID" }, 400);
+    }
+    try {
+      const models = await getModelsByProviderId(providerId);
+      return c.json({
+        success: true,
+        message: "Models fetched successfully",
+        data: models,
+      });
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          message: "Failed to fetch models for provider",
+          data: error.message,
+        },
+        500
+      );
+    }
+  })
+  .get("/:modelId", async (c) => {
+    const modelId = c.req.param("modelId");
+    if (!modelId) {
+      return c.json({ error: "Invalid model ID" }, 400);
+    }
+    try {
+      const model = await getModelById(modelId);
+      if (!model) {
+        return c.json(
+          {
+            success: false,
+            message: "Model not found",
+            data: null,
+          },
+          404
+        );
+      }
+
+      return c.json({
+        success: true,
+        message: "Model fetched successfully",
+        data: model,
+      });
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          message: "Failed to fetch model",
+          data: error.message,
+        },
+        500
+      );
+    }
+  })
+
+  .put("/:modelId", zValidator("json", ModelUpdateSchema), async (c) => {
+    const modelId = c.req.param("modelId");
+    if (!modelId) {
+      throw new Error("Invalid model ID");
+    }
+    const data = c.req.valid("json");
+    try {
+      if (Object.keys(data).length === 0) {
+        throw new Error("No update data provided");
+      }
+
+      const updatedModel = await updateModel(modelId, {
+        ...data,
+      });
+
+      if (!updatedModel) {
+        throw new Error("Model not found or no changes made");
+      }
+
+      if (data.is_default === true && updatedModel.is_default) {
+        await setDefaultModel(updatedModel.id);
+      }
+
+      return c.json(
+        {
+          success: true,
+          message: "Model updated successfully",
+          data: updatedModel,
+        },
+        200
+      );
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          message: "Failed to update model",
+          data: error.message,
+        },
+        500
+      );
+    }
+  })
+
+  .delete("/:modelId", async (c) => {
+    const modelId = c.req.param("modelId");
+    if (!modelId) {
+      throw new Error("Invalid model ID");
+    }
+    try {
+      const deletedModel = await deleteModel(modelId);
+      if (!deletedModel) {
+        throw new Error("Model not found");
+      }
+      return c.json({
+        success: true,
+        message: "Model deleted successfully",
+        data: deletedModel,
+      });
+    } catch (error: any) {
+      return c.json(
+        {
+          success: false,
+          message: "Failed to delete model",
+          data: error.message,
+        },
+        500
+      );
+    }
+  })
+  .post("/:id/set-default", async (c) => {
+    const modelId = c.req.param("id");
+    if (!modelId) {
+      throw new Error("Invalid model ID");
+    }
+    try {
+      const updatedModel = await setDefaultModel(modelId);
+
+      return c.json({
+        success: true,
+        message: "Model set as default successfully",
+        data: updatedModel,
+      });
+    } catch (error: any) {
+      let errorMessage = error.message;
+      if (error.message && error.message.includes("not found")) {
+        errorMessage = "Model not found";
+      }
+      return c.json(
+        {
+          success: false,
+          message: "Failed to set model as default",
+          data: errorMessage,
+        },
+        500
+      );
+    }
+  });

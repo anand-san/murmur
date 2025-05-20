@@ -5,9 +5,9 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createMistral } from "@ai-sdk/mistral";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
-
-import { db } from "./db"; // Assuming db is exported from db/index.ts
-import { getRegistryProvidersConfig } from "./service/modelConfigService";
+import { db } from "./db";
+import { getRegistryProvidersConfig } from "./service/configService/modelRegistry";
+import { ALLOWED_PROVIDERS } from "./service/configService/constants";
 
 type ProviderFactory = (config: {
   apiKey?: string;
@@ -15,33 +15,28 @@ type ProviderFactory = (config: {
   [key: string]: any;
 }) => Provider;
 
-// Map SDK IDs to their factory functions
-const providerFactories: Record<string, ProviderFactory> = {
-  openai: createOpenAI as ProviderFactory,
-  groq: createGroq as ProviderFactory,
-  anthropic: createAnthropic as ProviderFactory,
-  deepseek: createDeepSeek as ProviderFactory,
-  mistral: createMistral as ProviderFactory,
-  google: createGoogleGenerativeAI as ProviderFactory,
-};
+const providerFactories: Record<string, ProviderFactory> =
+  ALLOWED_PROVIDERS.reduce(
+    (acc, provider) => {
+      if (provider === "openai") {
+        acc[provider] = createOpenAI as ProviderFactory;
+      } else if (provider === "groq") {
+        acc[provider] = createGroq as ProviderFactory;
+      } else if (provider === "anthropic") {
+        acc[provider] = createAnthropic as ProviderFactory;
+      } else if (provider === "deepseek") {
+        acc[provider] = createDeepSeek as ProviderFactory;
+      } else if (provider === "mistral") {
+        acc[provider] = createMistral as ProviderFactory;
+      } else if (provider === "google") {
+        acc[provider] = createGoogleGenerativeAI as ProviderFactory;
+      }
+      return acc;
+    },
+    {} as Record<string, ProviderFactory>
+  );
 
-/**
- * Creates a fresh provider registry by fetching current configurations
- * from the database and instantiating AI SDK providers.
- * This function is intended to be called per request if the latest
- * configuration is always needed.
- * @param dbInstance - Optional database instance, defaults to the imported `db`.
- * @returns A promise resolving to a newly created ProviderRegistry instance.
- */
-export async function createFreshProviderRegistry(
-  dbInstance?: typeof db
-): Promise<Provider> {
-  // Use the provided dbInstance or the default imported one
-  const currentDb = dbInstance || db;
-  // getRegistryProvidersConfig uses the db instance imported within modelConfigService.ts,
-  // so passing currentDb to it isn't directly needed unless modelConfigService is refactored.
-  // For clarity, we acknowledge it relies on the shared db connection.
-
+export async function createFreshProviderRegistry(): Promise<Provider> {
   console.log(
     "Creating fresh provider registry from DB for current request..."
   );
@@ -50,33 +45,33 @@ export async function createFreshProviderRegistry(
   const configuredProviders: Record<string, Provider> = {};
 
   for (const config of providerConfigs) {
-    console.log({
-      config,
-    });
-    const factory = providerFactories[config.provider_sdk_id];
+    const factory = providerFactories[config.provider_id];
+
     if (factory) {
       try {
         const factoryConfig: { apiKey?: string; baseURL?: string } = {
           apiKey: config.api_key,
         };
         if (config.base_url) {
-          // Only add baseURL if it's provided and not empty
           factoryConfig.baseURL = config.base_url;
         }
+
         const providerInstance = factory(factoryConfig);
-        configuredProviders[config.provider_sdk_id] = providerInstance;
+
+        configuredProviders[config.provider_id] = providerInstance;
+
         console.log(
-          `Dynamically configured provider for request: ${config.provider_sdk_id}`
+          `Dynamically configured provider for request: ${config.provider_id}`
         );
       } catch (error) {
         console.error(
-          `Error configuring provider ${config.provider_sdk_id} for request:`,
+          `Error configuring provider ${config.provider_id} for request:`,
           error
         );
       }
     } else {
       console.warn(
-        `No factory found for provider SDK ID during request: ${config.provider_sdk_id}`
+        `No factory found for provider SDK ID during request: ${config.provider_id}`
       );
     }
   }

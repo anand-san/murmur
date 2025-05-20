@@ -5,7 +5,7 @@
     "dev": "bun run --hot index.ts",
     "build": "bun build ./index.ts --outdir=dist --minify",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
     "db:up": "drizzle-kit up",
     "db:studio": "drizzle-kit studio",
     "test": "vitest"

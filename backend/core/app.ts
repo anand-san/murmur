@@ -4,13 +4,21 @@ import { logger } from "hono/logger";
 import { chatRouter } from "./src/routes/chatRouter";
 import { speechRouter } from "./src/routes/speechRouter";
 import { imageRouter } from "./src/routes/imageRouter";
-import { modelConfigRouter } from "./src/routes/modelConfigRouter";
+import { configRouter } from "./src/routes/config/configRouter";
 
 const app = new Hono();
 
 app.onError((err: unknown, ctx: Context) => {
   console.error("Error occurred:", err);
-  return ctx.json({ error: "Something went horribly wrong" }, 500);
+
+  return ctx.json(
+    {
+      success: false,
+      message: "Something went horribly wrong",
+      data: err instanceof Error ? err.message : "Unknown error",
+    },
+    500
+  );
 });
 
 app.use(
@@ -30,7 +38,7 @@ const apiRoutes = app
   .route("/chat", chatRouter)
   .route("/speech", speechRouter)
   .route("/image", imageRouter)
-  .route("/config", modelConfigRouter);
+  .route("/config", configRouter);
 
 export default app;
 export type ApiRoutes = typeof apiRoutes;
