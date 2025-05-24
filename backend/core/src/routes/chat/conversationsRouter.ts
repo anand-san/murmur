@@ -3,19 +3,14 @@ import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getCurrentUser } from "../../middleware/authMiddleware";
-import { generateChatCompletion } from "../../service/chatService/chatService";
+import { coreMessageSchema } from "ai";
 
 const CreateConversationSchema = z.object({
   title: z.string().optional(),
 });
 
-const ConversationMessageSchema = z.object({
-  message: z.string(),
-  modelId: z.string().optional(),
-});
-
 export const conversationsRouter = new Hono()
-  .get("/conversations", async (c) => {
+  .get("/", async (c) => {
     try {
       const user = getCurrentUser(c);
       const conversations = await UserConversationService.getUserConversations(
@@ -28,31 +23,27 @@ export const conversationsRouter = new Hono()
     }
   })
 
-  .post(
-    "/conversations",
-    zValidator("json", CreateConversationSchema),
-    async (c) => {
-      try {
-        const user = getCurrentUser(c);
-        const { title } = c.req.valid("json");
-        const conversationId = await UserConversationService.createConversation(
-          user.id,
-          title
-        );
-        return c.json({ conversationId });
-      } catch (error) {
-        console.error("Error creating conversation:", error);
-        return c.json({ error: "Failed to create conversation" }, 500);
-      }
-    }
-  )
-
-  .get("/conversations/:id/messages", async (c) => {
+  .post("/", zValidator("json", CreateConversationSchema), async (c) => {
     try {
       const user = getCurrentUser(c);
-      const conversationId = parseInt(c.req.param("id"));
+      const { title } = c.req.valid("json");
+      const conversationId = await UserConversationService.createConversation(
+        user.id,
+        title
+      );
+      return c.json({ conversationId });
+    } catch (error) {
+      console.error("Error creating conversation:", error);
+      return c.json({ error: "Failed to create conversation" }, 500);
+    }
+  })
 
-      if (isNaN(conversationId)) {
+  .get("/:id/messages", async (c) => {
+    try {
+      const user = getCurrentUser(c);
+      const conversationId = c.req.param("id");
+
+      if (!conversationId) {
         return c.json({ error: "Invalid conversation ID" }, 400);
       }
 
@@ -68,43 +59,25 @@ export const conversationsRouter = new Hono()
   })
 
   .post(
-    "/conversations/:id/messages",
-    zValidator("json", ConversationMessageSchema),
+    "/:id/messages",
+    zValidator("json", z.array(coreMessageSchema)),
     async (c) => {
       try {
         const user = getCurrentUser(c);
-        const conversationId = parseInt(c.req.param("id"));
-        const { message, modelId } = c.req.valid("json");
+        const conversationId = c.req.param("id");
+        const coreMessage = c.req.valid("json");
 
-        if (isNaN(conversationId)) {
+        if (!conversationId) {
           return c.json({ error: "Invalid conversation ID" }, 400);
         }
 
-        await UserConversationService.addMessage(
+        const newMessage = await UserConversationService.addMessage(
           conversationId,
-          "user",
-          message,
+          coreMessage,
           user.id
         );
 
-        const messages = await UserConversationService.getConversationMessages(
-          conversationId,
-          user.id
-        );
-
-        const aiResponse = await generateChatCompletion(
-          messages.map((m) => ({ role: m.role as any, content: m.content })),
-          modelId
-        );
-
-        const aiMessage = await UserConversationService.addMessage(
-          conversationId,
-          "assistant",
-          aiResponse,
-          user.id
-        );
-
-        return c.json({ message: aiMessage });
+        return c.json({ message: newMessage });
       } catch (error) {
         console.error("Error sending message:", error);
         return c.json({ error: "Failed to send message" }, 500);
@@ -113,15 +86,15 @@ export const conversationsRouter = new Hono()
   )
 
   .put(
-    "/conversations/:id",
+    "/:id",
     zValidator("json", z.object({ title: z.string() })),
     async (c) => {
       try {
         const user = getCurrentUser(c);
-        const conversationId = parseInt(c.req.param("id") as string);
+        const conversationId = c.req.param("id");
         const { title } = c.req.valid("json");
 
-        if (isNaN(conversationId)) {
+        if (!conversationId) {
           return c.json({ error: "Invalid conversation ID" }, 400);
         }
 
@@ -138,12 +111,12 @@ export const conversationsRouter = new Hono()
     }
   )
 
-  .delete("/conversations/:id", async (c) => {
+  .delete("/:id", async (c) => {
     try {
       const user = getCurrentUser(c);
-      const conversationId = parseInt(c.req.param("id") as string);
+      const conversationId = c.req.param("id");
 
-      if (isNaN(conversationId)) {
+      if (!conversationId) {
         return c.json({ error: "Invalid conversation ID" }, 400);
       }
 

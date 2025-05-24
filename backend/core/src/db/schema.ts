@@ -8,6 +8,7 @@ import {
   boolean,
 } from "drizzle-orm/pg-core";
 import * as authSchema from "../../auth-schema";
+import { CoreMessage } from "ai";
 
 export const aiProviders = pgTable("ai_providers", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
@@ -36,6 +37,7 @@ export const providerModels = pgTable("provider_models", {
 
 export const conversations = pgTable("conversations", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  externalId: text("external_chat_id").unique().notNull(),
   userId: text("user_id")
     .notNull()
     .references(() => authSchema.user.id, { onDelete: "cascade" }),
@@ -46,12 +48,13 @@ export const conversations = pgTable("conversations", {
 
 export const messages = pgTable("messages", {
   id: integer().primaryKey().generatedAlwaysAsIdentity(),
-  conversationId: integer("conversation_id")
+  externalId: text("external_message_id").unique().notNull(),
+  conversationId: text("conversation_id")
     .notNull()
-    .references(() => conversations.id, { onDelete: "cascade" }),
-  role: varchar({ length: 20 }).notNull(), // 'user' | 'assistant'
-  content: text().notNull(),
-  timestamp: timestamp().defaultNow().notNull(),
+    .references(() => conversations.externalId, { onDelete: "cascade" }),
+  content: jsonb().$type<CoreMessage[]>().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const userSettings = pgTable("user_settings", {
