@@ -36,6 +36,7 @@ const AiInteractionWindow: React.FC = () => {
     body: {
       modelId: selectedModelId,
     },
+    credentials: "include",
     adapters: {
       attachments: new CompositeAttachmentAdapter([
         new SimpleImageAttachmentAdapter(),

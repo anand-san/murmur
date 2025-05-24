@@ -26,6 +26,7 @@ export async function processImageWithVision(
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
         image: `data:image/jpeg;base64,${base64Image}`,
         prompt,

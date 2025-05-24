@@ -5,6 +5,7 @@ import ErrorBoundary from "./components/ErrorBoundary"; // Import ErrorBoundary
 import { Toaster } from "sonner";
 import { SidebarProvider } from "./components/ui/sidebar";
 import { ModelSelectionProvider } from "./views/AiInteraction/context/ModelSelectionContext";
+import { AuthProvider } from "./contexts/AuthContext";
 import WindowManager from "./WindowManager";
 
 const RootComponent = () => {
@@ -14,20 +15,22 @@ const RootComponent = () => {
     <div className="bg-background/80">
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <SidebarProvider defaultOpen={false}>
-            <ModelSelectionProvider>
-              <>
-                <div
-                  className="absolute top-0 h-7 w-full z-50"
-                  data-tauri-drag-region
-                />
-                <div className="h-screen w-screen grow bg-background/50">
-                  <WindowManager />
-                </div>
-              </>
-              <Toaster />
-            </ModelSelectionProvider>
-          </SidebarProvider>
+          <AuthProvider>
+            <SidebarProvider defaultOpen={false}>
+              <ModelSelectionProvider>
+                <>
+                  <div
+                    className="absolute top-0 h-7 w-full z-50"
+                    data-tauri-drag-region
+                  />
+                  <div className="h-screen w-screen grow bg-background/50">
+                    <WindowManager />
+                  </div>
+                </>
+                <Toaster position="top-center" />
+              </ModelSelectionProvider>
+            </SidebarProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </div>

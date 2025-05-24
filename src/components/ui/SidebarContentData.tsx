@@ -19,6 +19,7 @@ import {
   ChevronDown,
   PanelLeftCloseIcon,
   MessageSquare,
+  LogOut,
 } from "lucide-react";
 
 import {
@@ -32,6 +33,7 @@ import {
 } from "./dropdown-menu";
 
 import { useModelSelection } from "../../views/AiInteraction/context/ModelSelectionContext";
+import { useAuth } from "../../contexts/AuthContext";
 import React from "react";
 import { Button } from "./button";
 
@@ -43,6 +45,9 @@ export default function SidebarContentData() {
     modelProviders,
     getModelNameById,
   } = useModelSelection();
+
+  // Use auth context for logout functionality
+  const { signOut, session } = useAuth();
 
   // Use sidebar context to control the sidebar state
   const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
@@ -195,6 +200,38 @@ export default function SidebarContentData() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
+          {/* User Info and Logout */}
+          {session?.user && (
+            <div className="border-t pt-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-xs font-medium text-primary">
+                      {session.user.name?.charAt(0)?.toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
+                    <p className="text-xs font-medium truncate">
+                      {session.user.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {session.user.email}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="hover:bg-red-100 hover:text-red-600 h-8 w-8 p-0 flex-shrink-0"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>
