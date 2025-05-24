@@ -195,6 +195,299 @@ async fn perform_clipboard_paste(text: String, app_handle: tauri::AppHandle) -> 
     Ok(())
 }
 
+#[tauri::command]
+async fn check_microphone_permission() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        
+        // Try to check microphone permission using tccutil
+        let exe_name = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
+            .unwrap_or_else(|| "murmur".to_string());
+            
+        let query = format!("SELECT allowed FROM access WHERE service='kTCCServiceMicrophone' AND client='{}';", exe_name);
+        let output = Command::new("sqlite3")
+            .args([
+                "/Library/Application Support/com.apple.TCC/TCC.db",
+                &query
+            ])
+            .output();
+            
+        match output {
+            Ok(result) if result.status.success() => {
+                let output_str = String::from_utf8_lossy(&result.stdout);
+                let response = output_str.trim();
+                match response {
+                    "1" => Ok("granted".to_string()),
+                    "0" => Ok("denied".to_string()),
+                    _ => {
+                        // If no entry found in TCC db, try alternative method
+                        check_microphone_via_audio_test().await
+                    }
+                }
+            }
+            _ => {
+                // Fallback to audio device test
+                check_microphone_via_audio_test().await
+            }
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        // For non-macOS platforms, try to test audio access directly
+        check_microphone_via_audio_test().await
+    }
+}
+
+async fn check_microphone_via_audio_test() -> Result<String, String> {
+    use cpal::traits::HostTrait;
+    
+    // Try to get default input device - this is usually a good indicator
+    let host = cpal::default_host();
+    match host.default_input_device() {
+        Some(device) => {
+            // Try to get supported configs - this might trigger permission request
+            match device.supported_input_configs() {
+                Ok(mut configs) => {
+                    if configs.next().is_some() {
+                        Ok("granted".to_string())
+                    } else {
+                        Ok("unknown".to_string())
+                    }
+                }
+                Err(_) => Ok("denied".to_string()),
+            }
+        }
+        None => Ok("denied".to_string()),
+    }
+}
+
+#[tauri::command]
+async fn request_microphone_permission() -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        
+        // On macOS, we can try to trigger permission dialog by attempting to access microphone
+        // This is a simplified approach - in practice, the permission request happens when
+        // the app first tries to access the microphone
+        let output = Command::new("osascript")
+            .args(["-e", r#"
+                tell application "System Preferences"
+                    activate
+                    set current pane to pane "com.apple.preference.security"
+                    delay 1
+                    tell application "System Events"
+                        tell process "System Preferences"
+                            click button "Privacy" of tab group 1 of window 1
+                            delay 0.5
+                            select row (first row of outline 1 of scroll area 1 of tab group 1 of window 1 whose value of static text 1 is "Microphone")
+                        end tell
+                    end tell
+                end tell
+            "#])
+            .output()
+            .map_err(|e| format!("Failed to open microphone settings: {}", e))?;
+        
+        if output.status.success() {
+            Ok(true)
+        } else {
+            Err("Failed to open microphone privacy settings".to_string())
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err("Permission request not supported on this platform".to_string())
+    }
+}
+
+#[tauri::command]
+async fn check_accessibility_permission() -> Result<String, String> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        
+        let output = Command::new("osascript")
+            .args(["-e", r#"
+                tell application "System Events"
+                    try
+                        get name of every process
+                        return "granted"
+                    on error
+                        return "denied"
+                    end try
+                end tell
+            "#])
+            .output()
+            .map_err(|e| format!("Failed to check accessibility permission: {}", e))?;
+        
+        if output.status.success() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            let result = output_str.trim();
+            if result == "granted" {
+                Ok("granted".to_string())
+            } else if result == "denied" {
+                Ok("denied".to_string())
+            } else {
+                Ok("unknown".to_string())
+            }
+        } else {
+            Ok("denied".to_string())
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Ok("unknown".to_string())
+    }
+}
+
+#[tauri::command]
+async fn request_accessibility_permission() -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    {
+        use std::process::Command;
+        
+        let output = Command::new("osascript")
+            .args(["-e", r#"
+                tell application "System Preferences"
+                    activate
+                    set current pane to pane "com.apple.preference.security"
+                    delay 1
+                    tell application "System Events"
+                        tell process "System Preferences"
+                            click button "Privacy" of tab group 1 of window 1
+                            delay 0.5
+                            select row (first row of outline 1 of scroll area 1 of tab group 1 of window 1 whose value of static text 1 is "Accessibility")
+                        end tell
+                    end tell
+                end tell
+            "#])
+            .output()
+            .map_err(|e| format!("Failed to open accessibility settings: {}", e))?;
+        
+        if output.status.success() {
+            Ok(true)
+        } else {
+            Err("Failed to open accessibility privacy settings".to_string())
+        }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err("Permission request not supported on this platform".to_string())
+    }
+}
+
+#[tauri::command]
+async fn test_backend_connection(url: String) -> Result<String, String> {
+    use std::time::Duration;
+    
+    // Basic URL validation
+    if url.is_empty() {
+        return Err("URL cannot be empty".to_string());
+    }
+    
+    // Try to parse the URL
+    match url::Url::parse(&url) {
+        Ok(parsed_url) => {
+            // For HTTP URLs, try a simple GET request to test connectivity
+            if parsed_url.scheme() == "http" || parsed_url.scheme() == "https" {
+                let client = reqwest::Client::builder()
+                    .timeout(Duration::from_secs(5))
+                    .build()
+                    .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+                
+                match client.get(&url).send().await {
+                    Ok(response) => {
+                        if response.status().is_success() {
+                            Ok("connected".to_string())
+                        } else {
+                            Ok(format!("server_error_{}", response.status().as_u16()))
+                        }
+                    }
+                    Err(e) => {
+                        if e.is_timeout() {
+                            Ok("timeout".to_string())
+                        } else if e.is_connect() {
+                            Ok("connection_failed".to_string())
+                        } else {
+                            Ok("network_error".to_string())
+                        }
+                    }
+                }
+            } else {
+                Err(format!("Unsupported URL scheme: {}", parsed_url.scheme()))
+            }
+        }
+        Err(_) => Err("Invalid URL format".to_string())
+    }
+}
+
+#[derive(serde::Serialize)]
+struct AudioDevice {
+    id: String,
+    name: String,
+    is_default: bool,
+}
+
+#[tauri::command]
+async fn get_audio_input_devices() -> Result<Vec<AudioDevice>, String> {
+    use cpal::traits::{HostTrait, DeviceTrait};
+    
+    let host = cpal::default_host();
+    let default_device = host.default_input_device();
+    let default_name = default_device
+        .as_ref()
+        .and_then(|d| d.name().ok())
+        .unwrap_or_default();
+    
+    let devices = host.input_devices()
+        .map_err(|e| format!("Failed to enumerate input devices: {}", e))?;
+    
+    let mut audio_devices = Vec::new();
+    
+    for device in devices {
+        if let Ok(name) = device.name() {
+            let device_id = format!("device_{}", audio_devices.len());
+            audio_devices.push(AudioDevice {
+                id: device_id,
+                name: name.clone(),
+                is_default: name == default_name,
+            });
+        }
+    }
+    
+    Ok(audio_devices)
+}
+
+#[tauri::command]
+async fn get_selected_audio_device() -> Result<String, String> {
+    // For now, return the default device
+    // In a more complete implementation, this would read from settings
+    use cpal::traits::{HostTrait, DeviceTrait};
+    
+    let host = cpal::default_host();
+    match host.default_input_device() {
+        Some(device) => {
+            device.name().map_err(|e| format!("Failed to get device name: {}", e))
+        }
+        None => Err("No default input device found".to_string()),
+    }
+}
+
+#[tauri::command]
+async fn set_selected_audio_device(device_name: String) -> Result<(), String> {
+    // For now, this is a placeholder
+    // In a more complete implementation, this would:
+    // 1. Validate the device exists
+    // 2. Store the selection in settings
+    // 3. Update the audio recording to use the selected device
+    
+    println!("Selected audio device: {}", device_name);
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 #[tokio::main]
 pub async fn run() {
@@ -212,7 +505,15 @@ pub async fn run() {
             hide_window,
             show_window,
             perform_clipboard_paste,
-            screenshot::capture_screenshot
+            screenshot::capture_screenshot,
+            check_microphone_permission,
+            request_microphone_permission,
+            check_accessibility_permission,
+            request_accessibility_permission,
+            test_backend_connection,
+            get_audio_input_devices,
+            get_selected_audio_device,
+            set_selected_audio_device
         ])
         .manage(audio_config.clone())
         .manage(app_state.clone())
