@@ -18,8 +18,9 @@ import {
   Bot,
   ChevronDown,
   PanelLeftCloseIcon,
+  Clock,
+  User,
   MessageSquare,
-  LogOut,
 } from "lucide-react";
 
 import {
@@ -34,11 +35,14 @@ import {
 
 import { useModelSelection } from "../../views/AiInteraction/context/ModelSelectionContext";
 import { useAuth } from "../../contexts/AuthContext";
-import React from "react";
+import { useConversations } from "../../contexts/ConversationContext";
+import React, { useEffect } from "react";
 import { Button } from "./button";
+import { ScrollArea } from "./scroll-area";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 
 export default function SidebarContentData() {
-  // Use the actual model selection context
   const {
     selectedModelId,
     setSelectedModelId,
@@ -46,13 +50,22 @@ export default function SidebarContentData() {
     getModelNameById,
   } = useModelSelection();
 
-  // Use auth context for logout functionality
-  const { signOut, session } = useAuth();
+  const { session } = useAuth();
 
-  // Use sidebar context to control the sidebar state
   const { toggleSidebar, setOpen, setOpenMobile, isMobile } = useSidebar();
 
-  // Function to close the sidebar
+  const {
+    conversations: recentChats,
+    isLoading: isLoadingChats,
+    refreshConversations,
+  } = useConversations();
+
+  useEffect(() => {
+    if (session?.user) {
+      refreshConversations();
+    }
+  }, [session?.user, refreshConversations]);
+
   const closeSidebar = () => {
     if (isMobile) {
       setOpenMobile(false);
@@ -61,86 +74,167 @@ export default function SidebarContentData() {
     }
   };
 
+  // React Router hooks
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Handle new chat creation
+  const handleNewChat = () => {
+    navigate("/chat/new");
+    closeSidebar();
+  };
+
+  // Handle chat selection
+  const handleChatSelect = (chatId: string) => {
+    navigate(`/chat/${chatId}`);
+    closeSidebar();
+  };
+
+  // Handle profile navigation
+  const handleProfileClick = () => {
+    navigate("/profile");
+    closeSidebar();
+  };
+
+  // Handle settings navigation
+  const handleSettingsClick = () => {
+    navigate("/settings");
+    closeSidebar();
+  };
+
   // Get the currently selected model name
   const currentModelName = getModelNameById(selectedModelId) || "Select Model";
+
+  // Format relative time for chat timestamps
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return "Today";
+    } else if (diffDays === 1) {
+      return "Yesterday";
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="z-50">
       {/* Header with app name and icon */}
       <SidebarHeader className="flex flex-row items-center justify-between mt-3">
-        <div className="flex items-center gap-2">
+        {/* <div className="flex items-center gap-2">
           <img
             src="/logo.png"
-            className="h-8 w-8 text-primary group-data-[collapsible=icon]:h-7"
+            className="h-8 w-8 text-primary group-data-[collapsible=icon]:h-6"
           />
-          <h2 className="text-md font-semibold group-data-[collapsible=icon]:hidden">
-            Murmur
-          </h2>
-        </div>
+          
+        </div> */}
         <Button
-          variant="link"
-          size="sm"
-          className="hover:bg-stone-200 rounded-full cursor-pointer p-2 group-data-[collapsible=icon]:hidden"
-          onClick={toggleSidebar}
-          title="Collapse Sidebar"
+          variant={"ghost"}
+          className="group-data-[collapsible=icon]:hidden cursor-pointer flex items-center justify-between rounded-md p-0 text-sm"
+          title={"Murmur"}
         >
-          <PanelLeftCloseIcon className="h-5 w-5" />
+          <img src="/logo.png" className="h-8 w-8 text-primary" />
+          <h2 className="text-md font-semibold">Murmur</h2>
         </Button>
+        <div>
+          <Button
+            variant="link"
+            size="sm"
+            className="hover:bg-stone-200 rounded-full cursor-pointer p-2"
+            onClick={handleNewChat}
+            title="Collapse Sidebar"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="link"
+            size="sm"
+            className="hover:bg-stone-200 rounded-full cursor-pointer p-2 group-data-[collapsible=icon]:hidden"
+            onClick={toggleSidebar}
+            title="Collapse Sidebar"
+          >
+            <PanelLeftCloseIcon className="h-5 w-5" />
+          </Button>
+        </div>
       </SidebarHeader>
 
-      {/* Sidebar Content with menu options */}
       <SidebarContent>
-        {/* Actions Group */}
         <SidebarGroup>
-          <SidebarGroupLabel>Actions</SidebarGroupLabel>
+          <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">
+            <Clock className="h-4 w-4 mr-2" />
+            Recent Chats
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton isActive={location.pathname === "/"} asChild>
-                  <div>
-                    <Button
-                      variant={"link"}
-                      className="cursor-pointer flex items-center justify-start ml-0 pl-0 gap-2 w-full hover:no-underline"
-                      onClick={() => {
-                        // Todo Open New Chat
-                        closeSidebar();
-                      }}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span>Chat</span>
-                    </Button>
-                    <Button
-                      variant="link"
-                      size="icon"
-                      className="ml-auto h-8 w-8 cursor-pointer"
-                      title="New Chat"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
+              {isLoadingChats ? (
+                <SidebarMenuItem>
+                  <div className="text-sm text-muted-foreground p-2 group-data-[collapsible=icon]:hidden">
+                    Loading...
                   </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={location.pathname === "/settings"}
-                  onClick={() => {
-                    // TODO: Open Settings Window
-                    closeSidebar();
-                  }}
-                  className="cursor-pointer"
-                >
-                  <Settings />
-                  <span>Settings</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+                </SidebarMenuItem>
+              ) : recentChats.length === 0 ? (
+                <SidebarMenuItem>
+                  <div className="text-sm text-muted-foreground p-2 group-data-[collapsible=icon]:hidden">
+                    No recent chats
+                  </div>
+                </SidebarMenuItem>
+              ) : (
+                recentChats.map((chat) => (
+                  <SidebarMenuItem key={chat.id}>
+                    <SidebarMenuButton
+                      isActive={location.pathname === `/chat/${chat.id}`}
+                      onClick={() => handleChatSelect(chat.id)}
+                      className="py-6 cursor-pointer justify-start text-left group-data-[collapsible=icon]:justify-center"
+                      title={chat.title}
+                    >
+                      <Avatar className="h-7 w-7">
+                        <AvatarFallback className=" bg-neutral-200 hover:bg-neutral-300 text-xs uppercase">
+                          {chat.title.trim()[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0 group-data-[collapsible=icon]:hidden">
+                        <div className="text-sm font-medium truncate">
+                          {chat.title}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatRelativeTime(chat.updatedAt)}
+                        </div>
+                      </div>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer with model selector */}
       <SidebarFooter>
-        <div className="p-3 space-y-3">
+        <div className="space-y-2">
+          <SidebarMenuItem className="flex gap-2 group-data-[collapsible=icon]:flex-col">
+            <SidebarMenuButton
+              isActive={location.pathname === "/profile"}
+              onClick={handleProfileClick}
+              className="cursor-pointer"
+            >
+              <User />
+              <span>Profile</span>
+            </SidebarMenuButton>
+            <SidebarMenuButton
+              isActive={location.pathname === "/settings"}
+              onClick={handleSettingsClick}
+              className="cursor-pointer"
+            >
+              <Settings />
+              <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* Navigation */}
           {/* Model Selector */}
           <div>
             <p className="text-xs text-muted-foreground mb-1 group-data-[collapsible=icon]:hidden">
@@ -200,38 +294,6 @@ export default function SidebarContentData() {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          {/* User Info and Logout */}
-          {session?.user && (
-            <div className="border-t pt-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <div className="w-6 h-6 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <span className="text-xs font-medium text-primary">
-                      {session.user.name?.charAt(0)?.toUpperCase()}
-                    </span>
-                  </div>
-                  <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-                    <p className="text-xs font-medium truncate">
-                      {session.user.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {session.user.email}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={signOut}
-                  className="hover:bg-red-100 hover:text-red-600 h-8 w-8 p-0 flex-shrink-0"
-                  title="Sign Out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
       </SidebarFooter>
     </Sidebar>

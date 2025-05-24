@@ -122,7 +122,7 @@ export function LoginButton() {
             <Button
               type="submit"
               disabled={isSubmitting || !email}
-              className="w-full h-12 text-base font-semibold bg-blue-600 hover:bg-blue-700"
+              className="w-full h-12 text-base font-semibold bg-neutral-600 hover:bg-neutral-700"
               size="lg"
             >
               {isSubmitting ? (

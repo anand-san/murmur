@@ -33,6 +33,19 @@ export const chatRouter = new Hono()
         conversationId = await UserConversationService.createConversation(
           user.id
         );
+      } else {
+        try {
+          await UserConversationService.getConversationMessages(
+            conversationId,
+            user.id
+          );
+        } catch (error) {
+          conversationId = await UserConversationService.createConversation(
+            user.id,
+            undefined,
+            conversationId
+          );
+        }
       }
 
       const result = streamText({

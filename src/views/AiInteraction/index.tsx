@@ -1,0 +1,92 @@
+import React, { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { generateId } from "ai";
+
+import { useModelSelection } from "./context/ModelSelectionContext";
+import useAiInteraction from "./hooks/useAiInteraction";
+import { ThreadMessageLike } from "@assistant-ui/react";
+import { loadChatMessages } from "../../api/chat";
+import {
+  transformBackendMessages,
+  validateBackendMessages,
+} from "./utils/messageTransform";
+import { useConversations } from "../../contexts/ConversationContext";
+import { toast } from "sonner";
+import { ConversationContainer } from "./ConversationContainer";
+
+const AiInteractionWindow: React.FC = () => {
+  const { id: chatId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { sendMessageRef, setTranscriptionStatusRef, errorMessage } =
+    useAiInteraction();
+
+  if (errorMessage) {
+    toast.error(errorMessage);
+  }
+  const { selectedModelId } = useModelSelection();
+  const { refreshConversations } = useConversations();
+  const [initialMessages, setInitialMessages] = useState<
+    ThreadMessageLike[] | undefined
+  >(undefined);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+  const isNewChat = !chatId;
+
+  const effectiveConversationId = useMemo(() => {
+    return isNewChat ? generateId() : chatId;
+  }, [isNewChat, chatId]);
+
+  useEffect(() => {
+    setIsLoadingMessages(true);
+    setInitialMessages(undefined);
+
+    if (chatId) {
+      loadChatMessages(chatId)
+        .then((backendMessages) => {
+          const validatedMessages = validateBackendMessages(backendMessages);
+          const threadMessages = transformBackendMessages(validatedMessages);
+          setInitialMessages(threadMessages);
+        })
+        .catch((error) => {
+          console.error("Failed to load chat messages:", error);
+          toast.error("Failed to load chat messages");
+        })
+        .finally(() => setIsLoadingMessages(false));
+    } else {
+      setInitialMessages(undefined);
+      setIsLoadingMessages(false);
+    }
+  }, [chatId]);
+
+  if (isLoadingMessages) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <img
+          src="/logo.png"
+          className="h-12 w-12 text-primary group-data-[collapsible=icon]:h-7"
+        />
+        <div className="text-gray-500">Loading conversation</div>
+      </div>
+    );
+  }
+
+  const chatKey = `chat-${chatId || "new"}-${effectiveConversationId}`;
+
+  return (
+    <ConversationContainer
+      key={chatKey}
+      chatId={chatId}
+      effectiveConversationId={effectiveConversationId}
+      selectedModelId={selectedModelId}
+      initialMessages={chatId ? initialMessages : undefined}
+      isNewChat={isNewChat}
+      sendMessageRef={sendMessageRef}
+      setTranscriptionStatusRef={setTranscriptionStatusRef}
+      refreshConversations={refreshConversations}
+      navigate={navigate}
+    />
+  );
+};
+
+// Separate wrapper component that gets completely remounted for each chat
+
+export default AiInteractionWindow;

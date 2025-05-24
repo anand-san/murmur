@@ -13,14 +13,19 @@ export interface AiSdkMessage {
 export class UserConversationService {
   static async createConversation(
     userId: string,
-    title?: string
+    title?: string,
+    externalId?: string
   ): Promise<string> {
-    const externalId = generateId(); // Generate UUID
+    const conversationId = externalId || generateId(); // Use provided ID or generate new one
     await db
       .insert(conversations)
-      .values({ externalId, userId, title: title || "New Conversation" });
+      .values({
+        externalId: conversationId,
+        userId,
+        title: title || "New Conversation",
+      });
 
-    return externalId;
+    return conversationId;
   }
 
   static async getUserConversations(userId: string) {

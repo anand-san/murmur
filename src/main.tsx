@@ -1,4 +1,5 @@
 import ReactDOM from "react-dom/client";
+import { BrowserRouter } from "react-router-dom";
 import "./styles/globals.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary"; // Import ErrorBoundary
@@ -16,20 +17,22 @@ const RootComponent = () => {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <SidebarProvider defaultOpen={false}>
-              <ModelSelectionProvider>
-                <>
-                  <div
-                    className="absolute top-0 h-7 w-full z-50"
-                    data-tauri-drag-region
-                  />
-                  <div className="h-screen w-screen grow bg-background/50">
-                    <WindowManager />
-                  </div>
-                </>
-                <Toaster position="top-center" />
-              </ModelSelectionProvider>
-            </SidebarProvider>
+            <BrowserRouter>
+              <SidebarProvider defaultOpen={false}>
+                <ModelSelectionProvider>
+                  <>
+                    <div
+                      className="absolute top-0 h-7 w-full z-50"
+                      data-tauri-drag-region
+                    />
+                    <div className="h-screen w-screen grow bg-background/50">
+                      <WindowManager />
+                    </div>
+                  </>
+                  <Toaster position="top-center" />
+                </ModelSelectionProvider>
+              </SidebarProvider>
+            </BrowserRouter>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
