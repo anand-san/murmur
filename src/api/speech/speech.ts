@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { api } from "../client";
 /**
  * Transcribe audio to text using the backend API

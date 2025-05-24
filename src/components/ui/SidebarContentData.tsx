@@ -20,7 +20,6 @@ import {
   PanelLeftCloseIcon,
   Clock,
   User,
-  MessageSquare,
 } from "lucide-react";
 
 import {
@@ -38,7 +37,6 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useConversations } from "../../contexts/ConversationContext";
 import React, { useEffect } from "react";
 import { Button } from "./button";
-import { ScrollArea } from "./scroll-area";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Avatar, AvatarFallback } from "../../components/ui/avatar";
 
