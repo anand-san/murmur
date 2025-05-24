@@ -12,8 +12,13 @@ export const auth = betterAuth({
   }),
 
   baseURL: env.BACKEND_URL,
+  secret: env.BETTER_AUTH_SECRET,
 
-  trustedOrigins: ["tauri://localhost"],
+  trustedOrigins: [
+    "tauri://localhost",
+    "http://localhost:5173",
+    "https://murmur.app.sandilya.dev",
+  ],
 
   plugins: [
     emailOTP({
@@ -33,6 +38,23 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
     updateAge: 60 * 60 * 24, // Update session daily
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 60 * 24 * 7,
+    },
+  },
+
+  cookies: {
+    sessionToken: {
+      name: "better-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "none",
+        secure: true,
+        path: "/",
+        domain: undefined, // Let browser handle domain
+      },
+    },
   },
 
   user: {

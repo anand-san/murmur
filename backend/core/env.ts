@@ -4,6 +4,7 @@ const envSchema = z.object({
   PORT: z.string().default("5555"),
   FRONTEND_URL: z.string().default("http://localhost:5173"),
   BACKEND_URL: z.string().default("http://localhost:5555"),
+  BETTER_AUTH_SECRET: z.string(),
   RESEND_API_KEY: z.string().optional(),
   GROQ_API_KEY: z.string().optional(),
   DEEPSEEK_API_KEY: z.string().optional(),

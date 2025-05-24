@@ -18,12 +18,15 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
-      console.log("CORS origin:", origin);
-      if (origin.includes("localhost")) {
+      if (origin === "tauri://localhost") {
         return origin;
       }
 
-      if (origin.includes("sandilya.dev")) {
+      if (origin && origin.includes("localhost")) {
+        return origin;
+      }
+
+      if (origin && origin.includes("sandilya.dev")) {
         return origin;
       }
     },
