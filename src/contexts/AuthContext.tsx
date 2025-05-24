@@ -80,8 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await authClient.signOut();
       setSession(null);
+
+      // Force clear any remaining session state
+      await checkSession();
     } catch (error) {
       console.error("Sign out failed:", error);
+      // Even if sign out fails, clear local session state
+      setSession(null);
+      await checkSession();
     }
   };
 
