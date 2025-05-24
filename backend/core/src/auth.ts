@@ -51,7 +51,7 @@ export const auth = betterAuth({
           await db.insert(schema.userSettings).values({
             userId: user.id,
             settings: {
-              backend_url: "http://localhost:5555/api",
+              backend_url: env.BACKEND_URL + "/api",
               use_local_mode: false,
             },
           });
