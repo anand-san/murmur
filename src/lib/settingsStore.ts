@@ -8,7 +8,8 @@ export interface AppSettings {
 const SETTINGS_FILE = "settings.json";
 const settingsStore = new LazyStore(SETTINGS_FILE);
 
-const DEFAULT_BACKEND_URL = "http://localhost:5555/api";
+const DEFAULT_BACKEND_URL =
+  import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:3000/api";
 
 export async function getAppSettings(): Promise<AppSettings> {
   console.log(`[${SETTINGS_FILE}] Attempting to get app settings...`);

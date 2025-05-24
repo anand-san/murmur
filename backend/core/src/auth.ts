@@ -50,8 +50,8 @@ export const auth = betterAuth({
       name: "better-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "lax",
-        secure: false,
+        sameSite: "none",
+        secure: true,
         path: "/",
         domain: undefined, // Let browser handle domain
       },

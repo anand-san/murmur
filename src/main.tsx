@@ -8,6 +8,10 @@ import { SidebarProvider } from "./components/ui/sidebar";
 import { ModelSelectionProvider } from "./views/AiInteraction/context/ModelSelectionContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import WindowManager from "./WindowManager";
+import { initializeTauriFetch } from "./lib/tauriFetch";
+
+// Initialize Tauri fetch override for proper cookie handling
+initializeTauriFetch();
 
 const RootComponent = () => {
   const queryClient = new QueryClient();

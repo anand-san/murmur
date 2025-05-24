@@ -64,4 +64,4 @@ export const DEFAULT_MODEL_ID =
   "groq:meta-llama/llama-4-scout-17b-16e-instruct";
 
 export const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5555";
+  import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:5555";
