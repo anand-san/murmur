@@ -17,6 +17,7 @@ export const auth = betterAuth({
   trustedOrigins: [
     "tauri://localhost",
     "http://localhost:5173",
+    "http://localhost:1420",
     "https://murmur.app.sandilya.dev",
   ],
 
@@ -49,8 +50,8 @@ export const auth = betterAuth({
       name: "better-auth.session-token",
       options: {
         httpOnly: true,
-        sameSite: "none",
-        secure: true,
+        sameSite: "lax",
+        secure: false,
         path: "/",
         domain: undefined, // Let browser handle domain
       },
