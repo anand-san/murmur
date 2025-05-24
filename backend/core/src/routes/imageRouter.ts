@@ -1,14 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { authMiddleware } from "../middleware/authMiddleware";
 import { processImageToText } from "../service/imageService/imageService";
 import { ImageToTextSchema } from "../service/imageService/types";
 
-export const imageRouter = new Hono().post(
-  "/",
-  zValidator("json", ImageToTextSchema),
-  async (c) => {
+export const imageRouter = new Hono()
+  .use("/*", authMiddleware)
+  .post("/", zValidator("json", ImageToTextSchema), async (c) => {
     try {
-      // Extract image data, prompt, and optional modelId from request
       const { image, prompt, modelId } = c.req.valid("json");
       console.log(
         "Processing image with prompt:",
@@ -30,5 +29,4 @@ export const imageRouter = new Hono().post(
         500
       );
     }
-  }
-);
+  });

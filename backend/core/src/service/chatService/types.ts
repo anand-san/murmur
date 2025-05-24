@@ -18,6 +18,7 @@ export const ChatMessageSchema = z.object({
     )
   ),
   system: z.string().optional(),
-  tools: z.any().optional(), // Accept any tools format to handle different client implementations
-  modelId: z.string().optional(), // Add optional modelId field
+  tools: z.any().optional(),
+  modelId: z.string().optional(),
+  conversationId: z.number().optional(),
 });

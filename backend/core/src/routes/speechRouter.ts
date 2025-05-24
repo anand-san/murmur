@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
+import { authMiddleware } from "../middleware/authMiddleware";
 import {
   transcribeAudio,
   generateSpeech,
@@ -10,6 +11,7 @@ import {
 } from "../service/speechService/types";
 
 export const speechRouter = new Hono()
+  .use("/*", authMiddleware)
   .post("/speechtotext", zValidator("form", TranscriptionSchema), async (c) => {
     try {
       const { audio } = c.req.valid("form");
@@ -23,7 +25,7 @@ export const speechRouter = new Hono()
   .post("/texttospeech", zValidator("json", TextToSpeechSchema), async (c) => {
     try {
       const { text, voice } = c.req.valid("json");
-      const audioBuffer = await generateSpeech(text, voice); // Pass optional voice
+      const audioBuffer = await generateSpeech(text, voice);
 
       c.header("Content-Type", "audio/wav");
       c.header("Content-Length", audioBuffer.byteLength.toString());

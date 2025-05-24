@@ -1,4 +1,6 @@
-export const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+import env from "../env";
+
+export const GROQ_API_KEY = env.GROQ_API_KEY || "";
 export const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
 // API endpoint paths

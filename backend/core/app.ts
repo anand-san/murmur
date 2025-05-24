@@ -1,7 +1,9 @@
 import { Context, Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
-import { chatRouter } from "./src/routes/chatRouter";
+import { authRouter } from "./src/routes/authRouter";
+import { userRouter } from "./src/routes/userRouter";
+import { chatRouter } from "./src/routes/chat/chatRouter";
 import { speechRouter } from "./src/routes/speechRouter";
 import { imageRouter } from "./src/routes/imageRouter";
 
@@ -15,9 +17,25 @@ app.onError((err: unknown, ctx: Context) => {
 app.use(
   "/api/*",
   cors({
-    origin: "*",
-    allowMethods: ["POST", "GET", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    origin: (origin) => {
+      if (origin.includes("localhost")) {
+        return origin;
+      }
+
+      if (origin.includes("sandilya.dev")) {
+        return origin;
+      }
+    },
+    allowMethods: ["POST", "GET", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "Cookie",
+      "Set-Cookie",
+      "X-Requested-With",
+    ],
+    exposeHeaders: ["Set-Cookie"],
+    credentials: true,
   })
 );
 
@@ -26,6 +44,8 @@ app.use("*", logger());
 const apiRoutes = app
   .basePath("/api")
   .get("/health", (c) => c.json({ status: "ok" }))
+  .route("/auth", authRouter)
+  .route("/user", userRouter)
   .route("/chat", chatRouter)
   .route("/speech", speechRouter)
   .route("/image", imageRouter);

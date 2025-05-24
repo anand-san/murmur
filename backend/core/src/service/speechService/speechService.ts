@@ -4,12 +4,13 @@ import {
   GROQ_BASE_URL,
   TRANSCRIPTION_MODELS,
 } from "../../config";
+import env from "../../../env";
 
 export const transcribeAudio = async (audioFile: File): Promise<string> => {
   try {
     const groqClient = new OpenAI({
-      apiKey: GROQ_API_KEY,
-      baseURL: GROQ_BASE_URL,
+      apiKey: env.WHISPER_API_KEY,
+      baseURL: env.WHISPER_API_URL,
     });
     const response = await groqClient.audio.transcriptions.create({
       file: audioFile,
