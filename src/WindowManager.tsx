@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow as tauriWindow } from "@tauri-apps/api/window";
 import { ConfigManagerWindow } from "./views/ConfigManager/ConfigManagerWindow";
-import { ProtectedRoute } from "./components/auth/ProtectedRoute";
 import AppRouter from "./routes/AppRouter";
 
 const WindowManager = () => {

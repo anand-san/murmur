@@ -1,7 +1,6 @@
 import React from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { LoginButton } from "./LoginButton";
-import { MessageSquare } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

@@ -13,14 +13,7 @@ export const auth = betterAuth({
 
   baseURL: env.BACKEND_URL,
 
-  trustedOrigins: [
-    "http://localhost:1420",
-    "http://localhost:3000",
-    "tauri://localhost",
-    "https://tauri.localhost",
-    "http://tauri.localhost",
-    "http://localhost:5555",
-  ],
+  trustedOrigins: ["*"],
 
   plugins: [
     emailOTP({

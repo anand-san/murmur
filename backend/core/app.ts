@@ -18,6 +18,7 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
+      console.log("CORS origin:", origin);
       if (origin.includes("localhost")) {
         return origin;
       }
