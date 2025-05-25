@@ -18,7 +18,10 @@ app.use(
   "/api/*",
   cors({
     origin: (origin) => {
-      console.log("CORS origin:", origin);
+      if (!origin) {
+        return "tauri://localhost";
+      }
+
       if (origin === "tauri://localhost") {
         return origin;
       }
