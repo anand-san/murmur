@@ -11,7 +11,7 @@ export function initializeTauriFetch() {
   const originalFetch = window.fetch;
 
   window.fetch = async (...args) => {
-    const [input] = args;
+    const [input, init] = args;
     let url: string;
 
     if (typeof input === "string") {
@@ -27,7 +27,26 @@ export function initializeTauriFetch() {
     // Use Tauri's fetch for HTTP/HTTPS requests to external APIs
     if (url.startsWith("http://") || url.startsWith("https://")) {
       try {
-        return await tauriFetch(...args);
+        const headers = new Headers(init?.headers);
+
+        let hasOrigin = false;
+        for (const [key] of headers.entries()) {
+          if (key.toLowerCase() === "origin") {
+            hasOrigin = true;
+            break;
+          }
+        }
+
+        if (!hasOrigin) {
+          headers.set("Origin", "tauri://localhost");
+        }
+
+        const modifiedInit = {
+          ...init,
+          headers,
+        };
+
+        return await tauriFetch(input, modifiedInit);
       } catch (error) {
         console.error(
           "Tauri fetch failed, falling back to original fetch:",

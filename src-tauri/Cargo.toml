@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 mime = "0.3"
 lazy_static = "1.4"
 crossbeam-channel = "0.5"
-tauri-plugin-http = { version = "2", features = ["multipart", "json"] }
+tauri-plugin-http = { version = "2", features = ["multipart", "json", "unsafe-headers"] }
 xcap = "0.4.1" # Replaced screenshots with xcap
 image = { version = "0.25", features = ["png"] }
 thiserror = "1.0"
