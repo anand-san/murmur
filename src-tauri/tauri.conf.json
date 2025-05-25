@@ -18,11 +18,13 @@
         "url": "/",
         "width": 850,
         "height": 600,
+        "minWidth": 450,
+        "minHeight": 400,
         "decorations": true,
         "browserExtensionsEnabled": false,
         "trafficLightPosition": {
-          "x": 10,
-          "y": 10
+          "x": 15,
+          "y": 26
         },
         "visibleOnAllWorkspaces": true,
         "visible": true,

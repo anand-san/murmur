@@ -24,10 +24,6 @@ const RootComponent = () => {
             <AuthProvider>
               <SidebarProvider defaultOpen={false}>
                 <ModelSelectionProvider>
-                  <div
-                    className="absolute top-0 h-7 w-full z-50"
-                    data-tauri-drag-region
-                  />
                   <div className="h-screen w-screen grow bg-background/50">
                     <WindowManager />
                   </div>

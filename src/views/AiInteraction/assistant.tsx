@@ -66,7 +66,7 @@ export const Assistant = ({
   }, [setTranscriptionStatusRef]);
 
   return (
-    <div className="flex-1 w-full h-screen px-2 pt-2">
+    <div className="flex-1 w-full h-full px-2 pt-2">
       <Thread
         recorderState={recorderState}
         isPlayingAudio={isPlayingAudio}
