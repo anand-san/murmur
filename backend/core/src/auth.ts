@@ -1,6 +1,6 @@
-import { betterAuth } from "better-auth";
+import { APIError, betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { emailOTP } from "better-auth/plugins";
+import { createAuthMiddleware, emailOTP } from "better-auth/plugins";
 import { db } from "./db";
 import * as schema from "./db/schema";
 import { emailService } from "./service/emailService";
@@ -9,6 +9,12 @@ import env from "../env";
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
+    schema: {
+      user: schema.user,
+      session: schema.session,
+      account: schema.account,
+      verification: schema.verification,
+    },
   }),
 
   baseURL: env.BACKEND_URL,
@@ -31,7 +37,7 @@ export const auth = betterAuth({
         });
       },
       otpLength: 6,
-      expiresIn: 300, // 5 minutes
+      expiresIn: 300,
       allowedAttempts: 3,
     }),
   ],
@@ -45,53 +51,60 @@ export const auth = betterAuth({
     },
   },
 
-  cookies: {
-    sessionToken: {
-      name: "better-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "none",
-        secure: true,
-        path: "/",
-        domain: undefined, // Let browser handle domain
+  advanced: {
+    cookiePrefix: "murmur-app",
+    crossSubDomainCookies: {
+      enabled: true,
+    },
+    defaultCookieAttributes: {
+      httpOnly: true,
+      sameSite: "none",
+      secure: true,
+      path: "/",
+      domain: undefined,
+      partitioned: false,
+    },
+    cookies: {
+      session_token: {
+        name: "better-auth.session-token",
       },
     },
   },
 
-  user: {
-    additionalFields: {
-      // Add any custom user fields here if needed
-    },
+  hooks: {
+    before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path !== "/sign-up/email") {
+        return;
+      }
+      if (!ctx.body?.email.endsWith("@sandilya.dev")) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Email must end with @sandilya.dev during alpha testing.",
+        });
+      }
+    }),
   },
 
-  callbacks: {
-    user: {
-      created: async ({ user }: { user: any }) => {
-        console.log("New user created:", user.id);
-
-        // Initialize user settings when account is created
-        try {
-          await db.insert(schema.userSettings).values({
-            userId: user.id,
-            settings: {
-              backend_url: env.BACKEND_URL + "/api",
-              use_local_mode: false,
-            },
-          });
-          console.log("User settings initialized for:", user.id);
-        } catch (error) {
-          console.error("Failed to initialize user settings:", error);
-        }
-
-        // Send welcome email if email service is configured
-        if (emailService.isConfigured() && user.email) {
-          try {
-            await emailService.sendWelcomeEmail(user.email, user.name);
-            console.log("Welcome email sent to:", user.email);
-          } catch (error) {
-            console.error("Failed to send welcome email:", error);
-          }
-        }
+  databaseHooks: {
+    account: {
+      create: {
+        async after(account, context) {
+          console.log("New account created:", account.id);
+          // if (emailService.isConfigured() && ) {
+          //   try {
+          //     await emailService.sendWelcomeEmail(user.email, user.name);
+          //     console.log("Welcome email sent to:", user.email);
+          //   } catch (error) {
+          //     console.error("Failed to send welcome email:", error);
+          //   }
+          // }
+        },
+      },
+    },
+    session: {
+      create: {
+        async after(session) {
+          console.log("New session created:", session.id);
+        },
       },
     },
   },
