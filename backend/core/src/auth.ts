@@ -20,13 +20,7 @@ export const auth = betterAuth({
   baseURL: env.BACKEND_URL,
   secret: env.BETTER_AUTH_SECRET,
 
-  trustedOrigins: [
-    "tauri://localhost",
-    "http://localhost:5173",
-    "http://localhost:1420",
-    "null",
-    "https://murmur.app.sandilya.dev",
-  ],
+  trustedOrigins: ["*"],
 
   plugins: [
     emailOTP({
