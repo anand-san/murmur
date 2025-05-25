@@ -4,16 +4,13 @@ import { SidebarTrigger } from "../components/ui/sidebar";
 import SidebarContentData from "../components/ui/SidebarContentData";
 import { ConversationProvider } from "../contexts/ConversationContext";
 import { useAuth } from "@/contexts/AuthContext";
+import MurmurLoader from "@/components/ui/MurmurLoader";
 
 const AppLayout: React.FC = () => {
   const { session, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        LoadingRouter...
-      </div>
-    );
+    return <MurmurLoader />;
   }
 
   if (!session?.session.id) {

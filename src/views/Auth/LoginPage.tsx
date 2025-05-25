@@ -1,16 +1,13 @@
 import { Navigate } from "react-router-dom";
 import { LoginButton } from "../../components/auth/LoginButton";
 import { useAuth } from "@/contexts/AuthContext";
+import MurmurLoader from "@/components/ui/MurmurLoader";
 
 export function LoginPage() {
   const { session, isLoading } = useAuth();
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        LoadingLogin...
-      </div>
-    );
+    return <MurmurLoader />;
   }
 
   if (session?.session.id) {

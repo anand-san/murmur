@@ -13,6 +13,7 @@ import {
 import { useConversations } from "../../contexts/ConversationContext";
 import { toast } from "react-hot-toast";
 import { ConversationContainer } from "./ConversationContainer";
+import MurmurLoader from "@/components/ui/MurmurLoader";
 
 const AiInteractionWindow: React.FC = () => {
   const { id: chatId } = useParams<{ id: string }>();
@@ -64,15 +65,7 @@ const AiInteractionWindow: React.FC = () => {
   }, [chatId]);
 
   if (isLoadingMessages) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full">
-        <img
-          src="/logo.png"
-          className="h-12 w-12 text-primary group-data-[collapsible=icon]:h-7"
-        />
-        <div className="text-gray-500">Loading conversation</div>
-      </div>
-    );
+    return <MurmurLoader />;
   }
 
   const chatKey = `chat-${chatId || "new"}-${effectiveConversationId}`;
