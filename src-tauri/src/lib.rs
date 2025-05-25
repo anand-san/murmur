@@ -5,6 +5,7 @@ mod state;
 use cpal::traits::{DeviceTrait, HostTrait};
 use crossbeam_channel::unbounded;
 use rodio::Sink;
+use serde_json::json;
 use state::{AppStateRef, AudioConfig, AudioConfigRef, RecorderState, RecordingFlag};
 use std::fs::File;
 use std::io::BufReader;
@@ -17,7 +18,6 @@ use tauri::Manager;
 use tauri::{path::BaseDirectory, Emitter};
 use tauri_plugin_positioner::{Position, WindowExt};
 use tauri_plugin_store::StoreExt;
-use serde_json::json;
 
 fn emit_state_change(app_handle: &tauri::AppHandle, new_state: RecorderState) {
     println!("Emitting state change: {:?}", new_state);
@@ -200,21 +200,21 @@ async fn check_microphone_permission() -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         // Try to check microphone permission using tccutil
         let exe_name = std::env::current_exe()
             .ok()
             .and_then(|p| p.file_name().map(|n| n.to_string_lossy().to_string()))
             .unwrap_or_else(|| "murmur".to_string());
-            
-        let query = format!("SELECT allowed FROM access WHERE service='kTCCServiceMicrophone' AND client='{}';", exe_name);
+
+        let query = format!(
+            "SELECT allowed FROM access WHERE service='kTCCServiceMicrophone' AND client='{}';",
+            exe_name
+        );
         let output = Command::new("sqlite3")
-            .args([
-                "/Library/Application Support/com.apple.TCC/TCC.db",
-                &query
-            ])
+            .args(["/Library/Application Support/com.apple.TCC/TCC.db", &query])
             .output();
-            
+
         match output {
             Ok(result) if result.status.success() => {
                 let output_str = String::from_utf8_lossy(&result.stdout);
@@ -243,7 +243,7 @@ async fn check_microphone_permission() -> Result<String, String> {
 
 async fn check_microphone_via_audio_test() -> Result<String, String> {
     use cpal::traits::HostTrait;
-    
+
     // Try to get default input device - this is usually a good indicator
     let host = cpal::default_host();
     match host.default_input_device() {
@@ -269,7 +269,7 @@ async fn request_microphone_permission() -> Result<bool, String> {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         // On macOS, we can try to trigger permission dialog by attempting to access microphone
         // This is a simplified approach - in practice, the permission request happens when
         // the app first tries to access the microphone
@@ -290,7 +290,7 @@ async fn request_microphone_permission() -> Result<bool, String> {
             "#])
             .output()
             .map_err(|e| format!("Failed to open microphone settings: {}", e))?;
-        
+
         if output.status.success() {
             Ok(true)
         } else {
@@ -308,9 +308,11 @@ async fn check_accessibility_permission() -> Result<String, String> {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         let output = Command::new("osascript")
-            .args(["-e", r#"
+            .args([
+                "-e",
+                r#"
                 tell application "System Events"
                     try
                         get name of every process
@@ -319,10 +321,11 @@ async fn check_accessibility_permission() -> Result<String, String> {
                         return "denied"
                     end try
                 end tell
-            "#])
+            "#,
+            ])
             .output()
             .map_err(|e| format!("Failed to check accessibility permission: {}", e))?;
-        
+
         if output.status.success() {
             let output_str = String::from_utf8_lossy(&output.stdout);
             let result = output_str.trim();
@@ -348,7 +351,7 @@ async fn request_accessibility_permission() -> Result<bool, String> {
     #[cfg(target_os = "macos")]
     {
         use std::process::Command;
-        
+
         let output = Command::new("osascript")
             .args(["-e", r#"
                 tell application "System Preferences"
@@ -366,7 +369,7 @@ async fn request_accessibility_permission() -> Result<bool, String> {
             "#])
             .output()
             .map_err(|e| format!("Failed to open accessibility settings: {}", e))?;
-        
+
         if output.status.success() {
             Ok(true)
         } else {
@@ -382,12 +385,12 @@ async fn request_accessibility_permission() -> Result<bool, String> {
 #[tauri::command]
 async fn test_backend_connection(url: String) -> Result<String, String> {
     use std::time::Duration;
-    
+
     // Basic URL validation
     if url.is_empty() {
         return Err("URL cannot be empty".to_string());
     }
-    
+
     // Try to parse the URL
     match url::Url::parse(&url) {
         Ok(parsed_url) => {
@@ -397,7 +400,7 @@ async fn test_backend_connection(url: String) -> Result<String, String> {
                     .timeout(Duration::from_secs(5))
                     .build()
                     .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-                
+
                 match client.get(&url).send().await {
                     Ok(response) => {
                         if response.status().is_success() {
@@ -420,7 +423,7 @@ async fn test_backend_connection(url: String) -> Result<String, String> {
                 Err(format!("Unsupported URL scheme: {}", parsed_url.scheme()))
             }
         }
-        Err(_) => Err("Invalid URL format".to_string())
+        Err(_) => Err("Invalid URL format".to_string()),
     }
 }
 
@@ -433,20 +436,21 @@ struct AudioDevice {
 
 #[tauri::command]
 async fn get_audio_input_devices() -> Result<Vec<AudioDevice>, String> {
-    use cpal::traits::{HostTrait, DeviceTrait};
-    
+    use cpal::traits::{DeviceTrait, HostTrait};
+
     let host = cpal::default_host();
     let default_device = host.default_input_device();
     let default_name = default_device
         .as_ref()
         .and_then(|d| d.name().ok())
         .unwrap_or_default();
-    
-    let devices = host.input_devices()
+
+    let devices = host
+        .input_devices()
         .map_err(|e| format!("Failed to enumerate input devices: {}", e))?;
-    
+
     let mut audio_devices = Vec::new();
-    
+
     for device in devices {
         if let Ok(name) = device.name() {
             let device_id = format!("device_{}", audio_devices.len());
@@ -457,7 +461,7 @@ async fn get_audio_input_devices() -> Result<Vec<AudioDevice>, String> {
             });
         }
     }
-    
+
     Ok(audio_devices)
 }
 
@@ -465,13 +469,13 @@ async fn get_audio_input_devices() -> Result<Vec<AudioDevice>, String> {
 async fn get_selected_audio_device() -> Result<String, String> {
     // For now, return the default device
     // In a more complete implementation, this would read from settings
-    use cpal::traits::{HostTrait, DeviceTrait};
-    
+    use cpal::traits::{DeviceTrait, HostTrait};
+
     let host = cpal::default_host();
     match host.default_input_device() {
-        Some(device) => {
-            device.name().map_err(|e| format!("Failed to get device name: {}", e))
-        }
+        Some(device) => device
+            .name()
+            .map_err(|e| format!("Failed to get device name: {}", e)),
         None => Err("No default input device found".to_string()),
     }
 }
@@ -483,7 +487,7 @@ async fn set_selected_audio_device(device_name: String) -> Result<(), String> {
     // 1. Validate the device exists
     // 2. Store the selection in settings
     // 3. Update the audio recording to use the selected device
-    
+
     println!("Selected audio device: {}", device_name);
     Ok(())
 }
@@ -496,6 +500,7 @@ pub async fn run() {
     let recording_flag = RecordingFlag::new(AtomicBool::new(false));
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_clipboard_manager::init())

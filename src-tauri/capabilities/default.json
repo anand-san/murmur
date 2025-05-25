@@ -17,6 +17,7 @@
     "core:window:allow-close",
     "core:window:allow-hide",
     "core:window:allow-start-dragging",
+    "process:default",
     {
       "identifier": "http:default",
       "allow": [
