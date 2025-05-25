@@ -26,7 +26,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const checkSession = async () => {
     try {
       setIsLoading(true);
-      console.log("Checking session...");
 
       const { data, error } = await authClient.getSession();
       if (error) {
@@ -86,12 +85,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setIsLoading(true);
       try {
-        const { data: currentSession } = await authClient.getSession();
-        if (currentSession?.session.id) {
-          await authClient.revokeSession({ token: currentSession.session.id });
-        }
+        const currentSession = await authClient.getSession();
+        await authClient.revokeSession({
+          token: currentSession.data?.session.token ?? "",
+        });
         await authClient.signOut();
-        setSession(null);
+        await checkSession();
       } catch (error) {
         console.error("Backend signout failed:", error);
       }

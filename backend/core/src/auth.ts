@@ -76,11 +76,7 @@ export const auth = betterAuth({
       if (ctx.path !== "/sign-up/email") {
         return;
       }
-      if (!ctx.body?.email.endsWith("@sandilya.dev")) {
-        throw new APIError("BAD_REQUEST", {
-          message: "Email must end with @sandilya.dev during alpha testing.",
-        });
-      }
+      console.log("Before hook for sign-up/email");
     }),
   },
 
