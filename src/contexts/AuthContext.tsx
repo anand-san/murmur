@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { authClient, type Session } from "../api/auth";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 interface AuthContextType {
   session: Session | null;
@@ -17,16 +19,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const navigate = useNavigate();
   useEffect(() => {
-    // Check for existing session on app start
     checkSession();
   }, []);
 
   const checkSession = async () => {
     try {
-      const { data } = await authClient.getSession();
-      setSession(data);
+      setIsLoading(true);
+      console.log("Checking session...");
+
+      const { data, error } = await authClient.getSession();
+      if (error) {
+        toast("Could not get existing session, please log in again.");
+      } else {
+        setSession(data);
+      }
     } catch (error) {
       console.error("Session check failed:", error);
       setSession(null);
@@ -75,22 +83,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { success: false, error: "Failed to verify code" };
     }
   };
-
   const signOut = async () => {
     try {
-      await authClient.signOut();
-      setSession(null);
-
-      // Force clear any remaining session state
-      await checkSession();
+      setIsLoading(true);
+      try {
+        const { data: currentSession } = await authClient.getSession();
+        if (currentSession?.session.id) {
+          await authClient.revokeSession({ token: currentSession.session.id });
+        }
+        await authClient.signOut();
+        setSession(null);
+        navigate("/login");
+      } catch (error) {
+        console.error("Backend signout failed:", error);
+      }
     } catch (error) {
-      console.error("Sign out failed:", error);
-      // Even if sign out fails, clear local session state
-      setSession(null);
-      await checkSession();
+      toast.error("Sign out failed:");
+    } finally {
+      setIsLoading(false);
     }
   };
-
   return (
     <AuthContext.Provider
       value={{ session, isLoading, sendOTP, verifyOTP, signOut }}

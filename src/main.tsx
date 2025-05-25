@@ -19,26 +19,24 @@ const RootComponent = () => {
   return (
     <div className="bg-background/80">
       <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <BrowserRouter>
+        <BrowserRouter>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
               <SidebarProvider defaultOpen={false}>
                 <ModelSelectionProvider>
-                  <>
-                    <div
-                      className="absolute top-0 h-7 w-full z-50"
-                      data-tauri-drag-region
-                    />
-                    <div className="h-screen w-screen grow bg-background/50">
-                      <WindowManager />
-                    </div>
-                  </>
+                  <div
+                    className="absolute top-0 h-7 w-full z-50"
+                    data-tauri-drag-region
+                  />
+                  <div className="h-screen w-screen grow bg-background/50">
+                    <WindowManager />
+                  </div>
                   <Toaster position="top-center" />
                 </ModelSelectionProvider>
               </SidebarProvider>
-            </BrowserRouter>
-          </AuthProvider>
-        </QueryClientProvider>
+            </AuthProvider>
+          </QueryClientProvider>
+        </BrowserRouter>
       </ErrorBoundary>
     </div>
   );
