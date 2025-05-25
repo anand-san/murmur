@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { authClient, type Session } from "../api/auth";
-import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
 interface AuthContextType {
@@ -19,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+
   useEffect(() => {
     checkSession();
   }, []);
@@ -93,7 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         await authClient.signOut();
         setSession(null);
-        navigate("/login");
       } catch (error) {
         console.error("Backend signout failed:", error);
       }

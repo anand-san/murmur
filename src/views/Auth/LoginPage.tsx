@@ -1,6 +1,23 @@
+import { Navigate } from "react-router-dom";
 import { LoginButton } from "../../components/auth/LoginButton";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function LoginPage() {
+  const { session, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        LoadingLogin...
+      </div>
+    );
+  }
+
+  if (session?.session.id) {
+    console.log("User already logged in, redirecting to home page");
+    return <Navigate to="/chat/new" replace />;
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
       <div className="w-full max-w-md">

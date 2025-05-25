@@ -87,7 +87,7 @@ export const auth = betterAuth({
   databaseHooks: {
     account: {
       create: {
-        async after(account, context) {
+        async after(account) {
           console.log("New account created:", account.id);
           // if (emailService.isConfigured() && ) {
           //   try {

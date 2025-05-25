@@ -1,10 +1,25 @@
 import React from "react";
-import { Outlet } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { SidebarTrigger } from "../components/ui/sidebar";
 import SidebarContentData from "../components/ui/SidebarContentData";
 import { ConversationProvider } from "../contexts/ConversationContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AppLayout: React.FC = () => {
+  const { session, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        LoadingRouter...
+      </div>
+    );
+  }
+
+  if (!session?.session.id) {
+    return <Navigate to="/login" />;
+  }
+
   return (
     <ConversationProvider>
       <SidebarContentData />
