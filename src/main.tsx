@@ -1,9 +1,9 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import "./styles/globals.css";
+import "./styles/components.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary"; // Import ErrorBoundary
-import { Toaster } from "sonner";
+import { Toaster } from "react-hot-toast";
 import { SidebarProvider } from "./components/ui/sidebar";
 import { ModelSelectionProvider } from "./views/AiInteraction/context/ModelSelectionContext";
 import { AuthProvider } from "./contexts/AuthContext";

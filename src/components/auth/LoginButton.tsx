@@ -5,7 +5,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { OTPInput } from "../ui/otp-input";
 import { ArrowLeft, Mail, Clock } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 
 export function LoginButton() {
   const { sendOTP, verifyOTP, isLoading } = useAuth();

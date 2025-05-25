@@ -11,7 +11,7 @@ import {
   validateBackendMessages,
 } from "./utils/messageTransform";
 import { useConversations } from "../../contexts/ConversationContext";
-import { toast } from "sonner";
+import { toast } from "react-hot-toast";
 import { ConversationContainer } from "./ConversationContainer";
 
 const AiInteractionWindow: React.FC = () => {
@@ -21,7 +21,13 @@ const AiInteractionWindow: React.FC = () => {
     useAiInteraction();
 
   if (errorMessage) {
-    toast.error(errorMessage);
+    toast.error(errorMessage, {
+      style: {
+        borderRadius: "10px",
+        background: "#333",
+        color: "#fff",
+      },
+    });
   }
   const { selectedModelId } = useModelSelection();
   const { refreshConversations } = useConversations();
