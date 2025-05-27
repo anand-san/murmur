@@ -64,8 +64,7 @@ export const availableModelsRegistry: ModelProvider[] = [
   },
 ];
 
-export const DEFAULT_MODEL_ID =
-  "groq:meta-llama/llama-4-scout-17b-16e-instruct";
+export const DEFAULT_MODEL_ID = "google:gemini-2.5-flash-preview-05-20";
 
 export const API_BASE =
   import.meta.env.VITE_BACKEND_ENDPOINT || "http://localhost:5555";

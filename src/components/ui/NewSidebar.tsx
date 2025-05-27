@@ -209,6 +209,59 @@ const NewSidebar: React.FC<NewSidebarProps> = ({ className, children }) => {
               </TooltipContent>
             </Tooltip>
 
+            {/* Center - Model Selector */}
+            <div className="flex-1 flex justify-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="flex items-center gap-2 px-3 py-2 h-auto cursor-pointer hover:bg-neutral-200/50 rounded-lg"
+                  >
+                    <Bot className="h-4 w-4 flex-shrink-0" />
+                    <span className="text-sm font-medium truncate max-w-[200px]">
+                      {currentModelName}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="w-64 max-h-[300px] overflow-y-auto"
+                  align="center"
+                >
+                  <DropdownMenuLabel>Select Model</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {modelProviders.map((provider) => (
+                    <React.Fragment key={provider.providerName}>
+                      <DropdownMenuLabel className="flex items-center mt-1 first:mt-0">
+                        {provider.image && (
+                          <img
+                            src={provider.image}
+                            alt={provider.providerName}
+                            className="h-4 w-4 mr-2 rounded-full object-contain"
+                          />
+                        )}
+                        {provider.providerName}
+                      </DropdownMenuLabel>
+                      <DropdownMenuRadioGroup
+                        value={selectedModelId}
+                        onValueChange={setSelectedModelId}
+                      >
+                        {provider.models.map((model) => (
+                          <DropdownMenuRadioItem
+                            key={model.id}
+                            value={model.id}
+                            className="cursor-pointer"
+                          >
+                            <span className="ml-1">{model.name}</span>
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                      <DropdownMenuSeparator />
+                    </React.Fragment>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
             {/* Right side - Controls */}
             <div className="flex items-center gap-2">
               {/* New Chat */}
@@ -224,60 +277,6 @@ const NewSidebar: React.FC<NewSidebarProps> = ({ className, children }) => {
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>New Chat</TooltipContent>
-              </Tooltip>
-
-              {/* Model Selector */}
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="p-2  cursor-pointer rounded-full"
-                      >
-                        <Bot className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="w-64 max-h-[300px] overflow-y-auto"
-                      align="end"
-                    >
-                      <DropdownMenuLabel>Select Model</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {modelProviders.map((provider) => (
-                        <React.Fragment key={provider.providerName}>
-                          <DropdownMenuLabel className="flex items-center mt-1 first:mt-0">
-                            {provider.image && (
-                              <img
-                                src={provider.image}
-                                alt={provider.providerName}
-                                className="h-4 w-4 mr-2 rounded-full object-contain"
-                              />
-                            )}
-                            {provider.providerName}
-                          </DropdownMenuLabel>
-                          <DropdownMenuRadioGroup
-                            value={selectedModelId}
-                            onValueChange={setSelectedModelId}
-                          >
-                            {provider.models.map((model) => (
-                              <DropdownMenuRadioItem
-                                key={model.id}
-                                value={model.id}
-                                className="cursor-pointer"
-                              >
-                                <span className="ml-1">{model.name}</span>
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
-                          <DropdownMenuSeparator />
-                        </React.Fragment>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TooltipTrigger>
-                <TooltipContent>Current: {currentModelName}</TooltipContent>
               </Tooltip>
 
               {/* Settings Dropdown */}
