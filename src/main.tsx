@@ -4,7 +4,6 @@ import "./styles/components.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ErrorBoundary from "./components/ErrorBoundary"; // Import ErrorBoundary
 import { Toaster } from "react-hot-toast";
-import { SidebarProvider } from "./components/ui/sidebar";
 import { ModelSelectionProvider } from "./views/AiInteraction/context/ModelSelectionContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import WindowManager from "./WindowManager";
@@ -22,14 +21,12 @@ const RootComponent = () => {
         <BrowserRouter>
           <QueryClientProvider client={queryClient}>
             <AuthProvider>
-              <SidebarProvider defaultOpen={false}>
-                <ModelSelectionProvider>
-                  <div className="h-screen w-screen grow bg-background/50">
-                    <WindowManager />
-                  </div>
-                  <Toaster position="top-center" />
-                </ModelSelectionProvider>
-              </SidebarProvider>
+              <ModelSelectionProvider>
+                <div className="h-screen w-screen grow bg-background/50">
+                  <WindowManager />
+                </div>
+                <Toaster position="top-center" />
+              </ModelSelectionProvider>
             </AuthProvider>
           </QueryClientProvider>
         </BrowserRouter>
