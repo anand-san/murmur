@@ -22,8 +22,11 @@ export const availableModelsRegistry: ModelProvider[] = [
     image: "/images/providers/anthropic.png",
     providerName: "Anthropic",
     models: [
+      { id: "anthropic:claude-opus-4-20250514", name: "Claude 4 Opus" },
+      { id: "anthropic:claude-sonnet-4-20250514", name: "Claude 4 Sonnet" },
       { id: "anthropic:claude-3-7-sonnet-latest", name: "Claude 3.7 Sonnet" },
-      { id: "anthropic:claude-3-5-haiku-latest", name: "Claude 3 Haiku" },
+      { id: "anthropic:claude-3-7-sonnet-latest", name: "Claude 3.7 Sonnet" },
+      { id: "anthropic:claude-3-7-haiku-latest", name: "Claude 3.7 Haiku" },
     ],
   },
   {
@@ -46,8 +49,8 @@ export const availableModelsRegistry: ModelProvider[] = [
     image: "/images/providers/google.png",
     providerName: "Google",
     models: [
-      { id: "google:gemini-2.5-pro-preview-03-25", name: "Gemini 2.5 Pro" },
-      { id: "google:gemini-2.0-flash", name: "Gemini 2 Flash" },
+      { id: "google:gemini-2.5-pro-preview-05-06", name: "Gemini 2.5 Pro" },
+      { id: "google:gemini-2.5-flash-preview-05-20", name: "Gemini 2.5 Flash" },
     ],
   },
   {
@@ -55,6 +58,7 @@ export const availableModelsRegistry: ModelProvider[] = [
     providerName: "Mistral",
     models: [
       { id: "mistral:mistral-large-latest", name: "Mistral Large" },
+      { id: "mistral:mistral-medium-latest	", name: "Mistral Medium 25.05" },
       { id: "mistral:mistral-saba-latest", name: "Mistral Saba" },
     ],
   },
