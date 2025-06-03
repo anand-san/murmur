@@ -3,7 +3,7 @@ export interface Model {
   name: string;
 }
 
-export interface ModelsProvider {
+export interface ModelsConfig {
   providers: Record<string, ModelsConfigValue>;
   defaultModelId?: string;
 }

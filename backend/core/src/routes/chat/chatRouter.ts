@@ -47,13 +47,21 @@ export const chatRouter = new Hono()
           );
         }
       }
-
       const result = streamText({
         model: registry.languageModel(modelId as any),
         messages,
         system: DEFAULT_SYSTEM_PROMPT,
         temperature: 0.5,
         maxTokens: 4000,
+        onError: (error) => {
+          console.error(
+            "Error during chat completion for conversationId:",
+            conversationId,
+            "Error details:",
+            error
+          );
+          throw new Error(`Failed to generate chat completion`);
+        },
         onFinish: async (output) => {
           try {
             const responseoutput = output.response.messages;

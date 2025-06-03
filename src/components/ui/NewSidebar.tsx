@@ -229,35 +229,37 @@ const NewSidebar: React.FC<NewSidebarProps> = ({ className, children }) => {
                 >
                   <DropdownMenuLabel>Select Model</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {modelProviders.map((provider) => (
-                    <React.Fragment key={provider.providerName}>
-                      <DropdownMenuLabel className="flex items-center mt-1 first:mt-0">
-                        {provider.image && (
-                          <img
-                            src={provider.image}
-                            alt={provider.providerName}
-                            className="h-4 w-4 mr-2 rounded-full object-contain"
-                          />
-                        )}
-                        {provider.providerName}
-                      </DropdownMenuLabel>
-                      <DropdownMenuRadioGroup
-                        value={selectedModelId}
-                        onValueChange={setSelectedModelId}
-                      >
-                        {provider.models.map((model) => (
-                          <DropdownMenuRadioItem
-                            key={model.id}
-                            value={model.id}
-                            className="cursor-pointer"
-                          >
-                            <span className="ml-1">{model.name}</span>
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                      <DropdownMenuSeparator />
-                    </React.Fragment>
-                  ))}
+                  {Object.entries(modelProviders.providers || {}).map(
+                    ([providerKey, provider]) => (
+                      <React.Fragment key={providerKey}>
+                        <DropdownMenuLabel className="flex items-center mt-1 first:mt-0">
+                          {provider.image && (
+                            <img
+                              src={provider.image}
+                              alt={provider.displayName}
+                              className="h-4 w-4 mr-2 rounded-full object-contain"
+                            />
+                          )}
+                          {provider.displayName}
+                        </DropdownMenuLabel>
+                        <DropdownMenuRadioGroup
+                          value={selectedModelId}
+                          onValueChange={setSelectedModelId}
+                        >
+                          {(provider.models || []).map((model) => (
+                            <DropdownMenuRadioItem
+                              key={model.id}
+                              value={model.id}
+                              className="cursor-pointer"
+                            >
+                              <span className="ml-1">{model.name}</span>
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                        <DropdownMenuSeparator />
+                      </React.Fragment>
+                    )
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
