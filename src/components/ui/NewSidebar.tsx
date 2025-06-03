@@ -106,7 +106,7 @@ const NewSidebar: React.FC<NewSidebarProps> = ({ className, children }) => {
         {/* Left Sidebar */}
         <div
           className={cn(
-            "h-full bg-neutral-100/20 transition-all duration-300 ease-in-out flex flex-col mt-14",
+            "h-full bg-neutral-100/20 transition-all duration-300 ease-in-out flex flex-col",
             isExpanded ? "w-52" : "w-14"
           )}
         >
@@ -126,7 +126,7 @@ const NewSidebar: React.FC<NewSidebarProps> = ({ className, children }) => {
           </div> */}
 
           {/* Recent Chats */}
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-4 mt-14">
             {isExpanded && (
               <div className="flex items-center gap-2 mb-3 text-sm text-gray-600">
                 <Clock className="h-4 w-4" />
