@@ -2,7 +2,6 @@ import { z } from "zod";
 
 export const TextToSpeechSchema = z.object({
   text: z.string(),
-  voice: z.string().optional(), // Optional voice selection
 });
 
 // Schema for request validation

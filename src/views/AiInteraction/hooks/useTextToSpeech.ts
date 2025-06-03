@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { useThreadRuntime } from "@assistant-ui/react";
 import { generateSpeech } from "../../../api/speech/speech";
 
-// Define a type for text content parts
 type TextContentPart = { type: "text"; text: string };
 
 export const useTextToSpeech = () => {
@@ -33,7 +32,7 @@ export const useTextToSpeech = () => {
       return;
     }
 
-    stopAudioPlayback(); // Stop any currently playing audio first
+    stopAudioPlayback();
 
     console.log(
       "TTS hook: Attempting to play audio for text:",

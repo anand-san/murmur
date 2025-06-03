@@ -24,8 +24,8 @@ export const speechRouter = new Hono()
   })
   .post("/texttospeech", zValidator("json", TextToSpeechSchema), async (c) => {
     try {
-      const { text, voice } = c.req.valid("json");
-      const audioBuffer = await generateSpeech(text, voice);
+      const { text } = c.req.valid("json");
+      const audioBuffer = await generateSpeech(text);
 
       c.header("Content-Type", "audio/wav");
       c.header("Content-Length", audioBuffer.byteLength.toString());

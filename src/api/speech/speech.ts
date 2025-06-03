@@ -29,9 +29,9 @@ export async function transcribeAudio(audio: File) {
  * @param voice - Optional voice identifier
  * @returns A promise resolving to an ArrayBuffer containing the audio data
  */
-export async function generateSpeech(text: string, voice?: string) {
+export async function generateSpeech(text: string) {
   const res = await api.api.speech.texttospeech.$post({
-    json: { text, voice },
+    json: { text },
   });
 
   if (!res.ok) {
