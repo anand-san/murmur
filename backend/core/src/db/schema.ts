@@ -67,6 +67,19 @@ export const userSettings = pgTable("user_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const userAgents = pgTable("user_agents", {
+  id: integer().primaryKey().generatedAlwaysAsIdentity(),
+  userId: text("user_id")
+    .notNull()
+    .references(() => authSchema.user.id, { onDelete: "cascade" }),
+  name: varchar({ length: 255 }).notNull(),
+  description: text(),
+  systemMessage: text("system_message").notNull(),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export * from "../../auth-schema";
 
 export type User = typeof authSchema.user.$inferSelect;
@@ -79,3 +92,5 @@ export type Message = typeof messages.$inferSelect;
 export type NewMessage = typeof messages.$inferInsert;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
+export type UserAgent = typeof userAgents.$inferSelect;
+export type NewUserAgent = typeof userAgents.$inferInsert;

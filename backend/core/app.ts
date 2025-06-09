@@ -7,6 +7,7 @@ import { chatRouter } from "./src/routes/chat/chatRouter";
 import { speechRouter } from "./src/routes/speechRouter";
 import { imageRouter } from "./src/routes/imageRouter";
 import { modelsRouter } from "./src/routes/modelsRouter";
+import { agentsRouter } from "./src/routes/agentsRouter";
 
 const app = new Hono();
 
@@ -54,7 +55,8 @@ const apiRoutes = app
   .route("/chat", chatRouter)
   .route("/speech", speechRouter)
   .route("/image", imageRouter)
-  .route("/models", modelsRouter);
+  .route("/models", modelsRouter)
+  .route("/agents", agentsRouter);
 
 export default app;
 export type ApiRoutes = typeof apiRoutes;

@@ -15,6 +15,7 @@ const AiSdkChatSchema = z.object({
   messages: z.array(coreMessageSchema),
   conversationId: z.string().optional(),
   modelId: z.string(),
+  systemMessage: z.string().optional(),
   unstable_assistantMessageId: z.string().optional(),
 });
 
@@ -25,7 +26,12 @@ export const chatRouter = new Hono()
   .post("/", zValidator("json", AiSdkChatSchema), async (c) => {
     try {
       const user = getCurrentUser(c);
-      const { messages, conversationId: chatId, modelId } = c.req.valid("json");
+      const {
+        messages,
+        conversationId: chatId,
+        modelId,
+        systemMessage,
+      } = c.req.valid("json");
 
       let conversationId = chatId;
 
@@ -50,7 +56,7 @@ export const chatRouter = new Hono()
       const result = streamText({
         model: registry.languageModel(modelId as any),
         messages,
-        system: DEFAULT_SYSTEM_PROMPT,
+        system: systemMessage || DEFAULT_SYSTEM_PROMPT,
         temperature: 0.5,
         maxTokens: 4000,
         onError: (error) => {

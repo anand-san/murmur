@@ -8,6 +8,13 @@
       "when": 1748083117694,
       "tag": "0000_happy_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1748986731668,
+      "tag": "0001_mighty_metal_master",
+      "breakpoints": true
     }
   ]
 }

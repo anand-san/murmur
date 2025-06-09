@@ -12,6 +12,7 @@ import {
   SetTranscriptionStatusFn,
 } from "./hooks/useAiInteraction";
 import { API_BASE } from "./utils/constants";
+import { useAgents } from "../../contexts/AgentsContext";
 
 export const ConversationContainer: React.FC<{
   chatId: string | undefined;
@@ -34,12 +35,14 @@ export const ConversationContainer: React.FC<{
   navigate,
 }) => {
   const CHAT_API_URL = `${API_BASE}/api/chat`;
+  const { selectedAgent } = useAgents();
 
   const chat = useChatRuntime({
     api: CHAT_API_URL,
     body: {
       conversationId: effectiveConversationId,
       modelId: selectedModelId,
+      systemMessage: selectedAgent?.systemMessage,
     },
     credentials: "include",
     initialMessages,
